@@ -1,30 +1,28 @@
 
-template<class T>
-NumericVector calc_logN(const int A, const NumericVector &logN, const NumericVector &Ma, 
-						const NumericVector &Fa, const NumericVector &PE, T logR){
+// template<class T>
+// NumericVector calc_logN(const int A, const NumericVector &logN, const NumericVector &Ma, 
+						// const NumericVector &Fa, const NumericVector &PE, T logR){
 
-	NumericVector new_logN(A);
-	NumericVector Za(A), logNplus(A);
+	// NumericVector new_logN(A);
+	// NumericVector Za(A), logNplus(A);
 	
-	for(int i = 0; i < A; i++){
+	// for(int i = 0; i < A; i++){
 	
-		Za(i) = Ma(i) + Fa(i);
-		logNplus(i) = logN(i) - Za(i) + PE(i);
+		// Za(i) = Ma(i) + Fa(i);
+		// logNplus(i) = logN(i) - Za(i) + PE(i);
 		
-		if( (i != 0) & (i != A-1) ){
-			new_logN(i) = logNplus(i-1);
-		}
+		// if( (i != 0) & (i != A-1) ){
+			// new_logN(i) = logNplus(i-1);
+		// }
 		
-	}
+	// }
 	
-	new_logN(0) = logR;
-	new_logN(A-1) = std::log( std::exp(logNplus(A-2)) + std::exp(logNplus(A-1)) );
+	// new_logN(0) = logR;
+	// new_logN(A-1) = std::log( std::exp(logNplus(A-2)) + std::exp(logNplus(A-1)) );
 	
-	return new_logN;
+	// return new_logN;
 
-}
-
-
+// }
 
 
 // SPMSim is called in SPM model ; PopSim is called in AgeModel //

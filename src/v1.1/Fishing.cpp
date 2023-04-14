@@ -121,7 +121,7 @@ class F_obj{
 		
 		F_obj(NumericVector Mu, F_type Std):
 			Mu(Mu){
-			mvn = Std.size();
+			mvn = Std.size(); //size() will be 0 if a matrix
 			if(mvn){
 				N_sigma = Std._V;
 			}else{
