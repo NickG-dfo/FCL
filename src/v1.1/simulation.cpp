@@ -100,6 +100,10 @@ List AgeModel(  List OM,
 	//if F_type works properly, this should allow F_sigma to be either a matrix OR vector
 	F_type F_std = OM["F_sigma"]; //Uncertainty matrix/vector for error in F
 			
+	//Declaring HCR Custom MP if one is defined//
+	template<class T>
+	Function& HCR::CustomMP = OM["MP_Func"];
+	//			-------------------			  //
 			
 	// Swtiches //		 
 	LogicalVector R_settings = OM["Rec_Settings"],
@@ -211,6 +215,7 @@ List AgeModel(  List OM,
 	
 	//MP Stuff//
 	HCR<T> MP_obj; //Object for HCR outputs/functions
+	
 	//List for RP_obj
 	List LHC_list = List::create(Named("A") = A, //Max age
 								 Named("Mort") = Mterminal, //Assumes M & Sel are constant

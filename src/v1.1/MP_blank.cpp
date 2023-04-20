@@ -36,26 +36,31 @@ a Age-based model, but it can also run a SPM.
 
 */
 
+// namespace PopSim{
 
-template<class T>
-// HCR<T>::F_MP(T SSB, String name){ return; }
+	// // template<class T>
+	// // // HCR<T>::F_MP(T SSB, String name){ return; }
 
-template<class T>
-HCR<T>::SSB_MP(T SSB, String name){ return; }
+	// // template<class T>
+	// // HCR<T>::SSB_MP(T SSB, String name){ return; }
 
-template<class T>
-HCR<T>::Survey_MP(NumericVector survey_indices, String name){ return; }
+	// // template<class T>
+	// // HCR<T>::Survey_MP(NumericVector survey_indices, String name){ return; }
 
-template<class T>
-HCR<T>::F_MP(NumericVector &item, String name, String call_item = "SSB")
+	// // template<class T>
+	// // HCR<T>::F_MP(NumericVector &item, String name, String call_item = "SSB")
 
+	// // Custom MP Function //
+	
+	// template<class T>
+	// SR::CustomMP = 
 
-// Custom Recruitment Function //
+	// // Custom Recruitment Function //
 
-template<class T>
-SR::CustomRecruitment(T SSB, const NumericVector &parms){ return 0.; }
+	// template<class T>
+	// SR::CustomRecruitment(T SSB, const NumericVector &parms){ return 0.; }
 
-
+// };
 
 
 // R Simulation Function //

@@ -23,10 +23,6 @@ using Rcpp::DataFrame;
 
 
 #include <mseliteutils.cpp>
-#include <Mortality.cpp>
-#include <Ncalc.cpp>
-#include <Recruitment.cpp>
-#include <HCR.cpp>
 
 //	Simulation Function //
 
@@ -129,7 +125,8 @@ List simulation(List OM,
 		srr_obj = SRR<T>(OM);
 		//Do this here so parms stay consistence within each projection
 				
-		std::printf("Thread: %d \n", sim+1);
+		// std::printf("Thread: %d \n", sim+1);
+		std::printf("Thread: %d / %d \r", sim+1, sim_no);
 		
 		// set as zero each iter
 		Yield.fill(0.);
@@ -356,25 +353,6 @@ List simulation(List OM,
 									 Named("mp") = rep(mp, sim_no),
 									 Named("mproj") = rep(mproj, sim_no),
 									 Named("rproj") = rep(rproj, sim_no));
-
-	//means of matrices
-	// NumericVector TAC_mean = Mmean(all_TAC, 1),
-				  // Fbar_mean = Mmean(all_Fbar, 1),
-				  // Fbar_popwt_mean = Mmean(all_Fbar_popwt, 1),
-				  // Yield_mean = Mmean(all_Yield, 1),
-				  // Ydiff_mean = Mmean(all_Ydiff, 1),
-				  // Biomass_mean = Mmean(all_Biomass, 1),
-				  // SSB_mean = Mmean(all_SSB, 1),
-				  // Rec_mean = Mmean(all_Rec, 1);
-	// //std of matrices
-	// NumericVector TAC_std = Mstd(all_TAC, 1),
-				  // Fbar_std = Mstd(all_Fbar, 1),
-				  // Fbar_popwt_std = Mstd(all_Fbar_popwt, 1),
-				  // Yield_std = Mstd(all_Yield, 1),
-				  // Ydiff_std = Mstd(all_Ydiff, 1),
-				  // Biomass_std = Mstd(all_Biomass, 1),
-				  // SSB_std = Mstd(all_SSB, 1),
-				  // Rec_std = Mstd(all_Rec, 1);
 
 	//quantile matrices
 	NumericMatrix p05(y_sim, 8), p10(y_sim, 8), p50(y_sim, 8), p75(y_sim, 8), p90(y_sim, 8), p95(y_sim, 8);

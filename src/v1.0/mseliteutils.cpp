@@ -281,10 +281,51 @@ NumericVector as_vector(const NumericMatrix &M){
 }
 
 
+
+//quantile function
+
+template<class T>
+T quantile(NumericVector X, T prob){
+	
+	X = X.sort();
+	
+	T h = ((T)X.size() + .25)*prob + 3./8.;
+	NumericVector hb = Rcpp::floor( NumericVector {h} ),
+				  ht = Rcpp::ceil( NumericVector {h} );
+	T Qp = X(hb(0)) + (h - (T)hb(0)) * (X(ht(0)) - X(hb(0)));
+		
+	return Qp;
+	// NumericVector Y = Rcpp::qnorm();
+	// return (T)Y(0);
+}
+
+
+
 // -------------------------------------------------------------------------------------------------//
 
 
-// MSE-Lite Functions //
+// Armadillo Stuff //
+
+//This function converts arma rmvnorm to a Rcpp equivalent
+NumericVector mvrnorm(const NumericVector &mu, const NumericMatrix &S){
+
+	const unsigned int n = 1;
+	arma::vec amu = Rcpp::as<arma::vec>(mu);
+	arma::mat aS = Rcpp::as<arma::mat>(S);
+	arma::mat x = rmvnorm(n, amu, aS);
+	NumericMatrix X = Rcpp::wrap(x);
+	NumericVector out = X(0, _);
+	return out;
+
+}
+
+
+// -------------------------------------------------------------------------------------------------//
+
+
+// -- // MSELite Functions // -- //
+
+// Catch & F Functions //
 
 NumericVector baranov_catch(const NumericVector &Na, const NumericVector &Fa, const NumericVector &Ma){
 	
@@ -351,180 +392,229 @@ T solveF(T TAC, const NumericVector &sel, const NumericVector &Na, const Numeric
 }
 
 
-// Armadillo Stuff //
+// Recruitment functions //
+//functions return logRec because it makes implementation easier
+//make sure all parms are defined in OM for recruitment!//
 
-//This class is to convert arma 3Dcube to output in Rcpp
-class NumericMatrix3D{
+template<class T>
+T BH(T SSB, const NumericVector &parms){
 	
-		const int x, y, z;
-		arma::cube Storage3D;
-		// Note: arma::cube is a form of the generic type arma::Cube<Type> where <Type> is <double>
-		
-	public:
-			
-		NumericMatrix3D(const int ix, const int iy, const int iz): x(ix), y(iy), z(iz) {
-			Storage3D.reshape(x, y, z);
-		}
+	return parms(0) + std::log(SSB) - std::log(1. + std::exp(parms(1)) * SSB);
 	
-	
-		IntegerVector dims(void){ return {x, y, z}; }
-	
-		NumericMatrix slice_z(int depth){
-			NumericMatrix out = Rcpp::wrap( Storage3D.slice(depth) );
-			return out;			
-		}
-		NumericMatrix slice_y(int height){
-			NumericMatrix out = Rcpp::wrap( Storage3D.col(height) );
-			return out;			
-		}
-		NumericMatrix slice_x(int width){
-			NumericMatrix out = Rcpp::wrap( Storage3D.row(width) );
-			return out;			
-		}
-		
-		NumericVector trim_xy(int width, int height){
-			return slice_x(width)(height, _);
-		}
-		NumericVector trim_yx(int height, int width){
-			return slice_x(width)(height, _);
-		}
-		NumericVector file_xz(int width, int depth){
-			return slice_x(width)(_, depth);
-		}
-		NumericVector file_zx(int depth, int width){
-			return slice_x(width)(_, depth);
-		}
-		NumericVector rank_yz(int height, int depth){
-			return slice_z(depth)(height, _);
-		}
-		NumericVector rank_zy(int depth, int height){
-			return slice_z(depth)(height, _);
-		}
-		
-		double& operator() (int width, int height, int depth){
-			double *ret = &( Storage3D(width, height, depth) );
-			return *ret;
-		}
-		
-		NumericMatrix3D& operator= (NumericMatrix3D M){
-			IntegerVector Dims = M.dims();
-			for(int i = 0; i < Dims(0); i++){
-				for(int j = 0; j < Dims(1); j++){
-					for(int k = 0; k < Dims(2); k++){
-						(*this)(i, j, k) = M(i, j, k);
-					}
-				}
-			}
-			return *this;
-		}
-		
-};
+}
 
-//This function converts arma rmvnorm to a Rcpp equivalent
-NumericVector mvrnorm(const NumericVector &mu, const NumericMatrix &S){
+template<class T>
+T SigBH(T SSB, const T &max_S, const NumericVector &parms){
+		
+	//&parms = c(Rinf, S50, c), which are extracted from kernel in SRR f(x)
+	T max_R = parms(0) / ( 1. + std::pow(parms(1)/max_S, parms(2)) );
+	max_R = std::exp( std::log(max_R) - std::pow(parms(3), 2.)/2. ); // bias-correction
+	
+	T Rec = parms(0) / ( 1. + std::pow(parms(1)/SSB, parms(2)) ) * (SSB < max_S) + max_R * (SSB >= max_S);
+	Rec = std::log(Rec) - std::pow(parms(3), 2.)/2.; // bias-correction
+	
+	return Rec;
+	
+}
 
-	const unsigned int n = 1;
-	arma::vec amu = Rcpp::as<arma::vec>(mu);
-	arma::mat aS = Rcpp::as<arma::mat>(S);
-	arma::mat x = rmvnorm(n, amu, aS);
-	NumericMatrix X = Rcpp::wrap(x);
-	NumericVector out = X(0, _);
+NumericVector call_kernel(const NumericMatrix &kernel){
+	
+	int ind = (int)R::runif(0, kernel.rows());
+	return kernel(ind, _);
+	
+}
+
+template<class T>
+NumericMatrix SRR(const List &OM){
+		
+	NumericMatrix out(2, 4);
+	
+	NumericVector bh_parms = OM["BH_parms"];
+	NumericMatrix bh_cov = OM["BH_cov"];
+	NumericVector bh_est = mvrnorm(bh_parms, bh_cov);
+	
+	NumericMatrix kernel = OM["sigmoid_kernel"];
+	T bhsigerr = OM["bhsigerr"];
+	NumericVector sig_est = call_kernel(kernel);
+	
+	out(0, 0) = bh_est(0); out(0, 1) = bh_est(1); //BH parms
+	out(1, 0) = sig_est(0); out(1, 1) = sig_est(1); out(1, 2) = sig_est(2); out(1, 3) = bhsigerr; //sigBH parms
+	
 	return out;
-
-}
-
-
-
-// Auto-correlation class/functions //
-
-template<class T>
-T randWalk (T X, T &Std){ // Random Walk - takes two doubles
-	return X + R::rnorm(0., Std); // X = X_n-1, returns X_n
-}
-
-NumericVector randWalk (NumericVector X, NumericVector &Std){ // Random Walk - takes two vectors of equal length
-	for(int i = 0; i < X.size(); i++){
-		X(i) += R::rnorm(0., Std(i));
-	}
-	return X; // X = X_n-1, returns X_n
-}
-
-template<class T>
-struct AR1d{
 	
-	//Does AR(1) have a constant coefficient??//
-		const int n;
-		AR1d(const int size): n(size) {
-			if(n < 1) { n = 1; }
-		}
-		
-		int nforward;
-		NumericVector Y;
-		void forward(int __n){
-			nforward += __n;
-			Y.resize(nforward);
-		}
-		
-		//Numeric Vector should be length of n, so AR(1) X is a double in vector form
-		double operator() (NumericVector &X, T &Phi){
-			
-			if(Parms.size() > n) { std::printf("Number or parameters exceed requirement for AR(%d) process; some parameters will be ignored.", n); }
-			if(Parms.size() < n) {
-				std::printf("Required number of parameters for AR(%d) process exceed number provided; using '0' as default(s).", n);
-				Parms = cat( Parms, (NumericVector)rep(0., n-Parms.size()) );
-			}
-			
-			if(X.size() > n) { std::printf("Number or prior values exceed requirement for AR(%d) process; some inputs will be ignored.", n); }
-			if(X.size() < n) { 
-				std::printf("Required number of prior values for AR(%d) process exceed number provided; using '0' as default(s).", n);
-				X = cat( X, (NumericVector)rep(0., n-X.size()) );
-			}
-		
-			for(int i = 0; i < nforward; i++){
-				if(i < n){
-					Y(i) = X(i);
-				}else{
-					Y(i) += Phi * Y(i-n); //No error in AR process	
-				}
-			}
-			return Y;
-		}
-		
-		//Maybe remove error conmponent internally and just add externally if Error_type == 'AR'
+}
 
+
+// Abundance Function //
+
+template<class T>
+NumericVector calc_logN(const int A, const NumericVector &logN, const NumericVector &Ma, 
+						const NumericVector &Fa, const NumericVector &PE, T logR){
+
+	NumericVector new_logN(A);
+	NumericVector Za(A), logNplus(A);
+	
+	for(int i = 0; i < A; i++){
+	
+		Za(i) = Ma(i) + Fa(i);
+		logNplus(i) = logN(i) - Za(i) + PE(i);
+		
+		if( (i != 0) & (i != A-1) ){
+			new_logN(i) = logNplus(i-1);
+		}
+		
+	}
+	
+	new_logN(0) = logR;
+	new_logN(A-1) = std::log( std::exp(logNplus(A-2)) + std::exp(logNplus(A-1)) );
+	
+	return new_logN;
+
+}
+
+
+// Define Function for MP HCRs (for 3Ps RP) //
+
+template<class T>
+struct HCR{
+	
+	T TAC;
+	T F;
+	HCR& operator= (const HCR tf){
+		this->TAC = tf.TAC;
+		this->F = tf.F;
+		return *this;
+	}
+	
 };
 
-// struct AR2d{
+template<class T>
+HCR<T> MP_decision(//T F, T Catch, 
+				// const T Ubound, const T Fbound,
+				// const T harvestrate, const T threshold,
+				// NumericVector ssbr_bracket, const NumericVector f_bracket,
+				// NumericVector fbreak,
+				const String MP_name,
+				const NumericVector &Na, const NumericVector &Ma, const NumericVector &sel,
+				const NumericVector &mat, const NumericVector &Sw, const NumericVector &Cw){
 	
-		// const int n, m;
+	// declare values for MPs
+	HCR<T> MP_out;
+	short A = Na.size();
+	// T Lbound = 66.;
+	NumericVector temp_catch(A), temp_f(A);
 	
-		// AR2d(const int rows, const int cols): n(rows), m(cols) {;};
+	T ssb = 0.;	
+	for(short i = 0; i < A; i++){
+		ssb += Na(i) * mat(i) * Sw(i);
+	}
+	
+	//define TAC/F based on MP_name
+	if(MP_name == "No fishing"){
+		MP_out.TAC = 0.; //Fix this
+		MP_out.F = 0.001;
+	}
+	else if(MP_name == "Critical 100"){
+		MP_out.F = 0.001 +
+					( (ssb > 66.) & (ssb <= 1.75*66.) ) * (ssb - 66.)/(.75*66.) * .1 +
+					(ssb > 1.75*66.) * .1;
 		
-		// //Numeric Vector should be length of n, so AR(1) X is a double in a vector object
-		// double operator() (NumericMatrix &X, NumericMatrix &Parms, const double intercept = 0.){
-			
-			// NumericMatrix Parmss(n+1, m+1);
-			// if(Parms.nrow() > n+1 || Parms.ncol() > m+1) {
-				// std::printf("Number or parameters exceed requirement for AR(%d) process; some parameters will be ignored.", n);
-			// }
-			// if(Parms.nrow() < n+1 || Parms.ncol() < m+1) {
-				// std::printf("Required number of parameters for AR(%d) process exceed number provided; using '0' as default(s).", n);
-				// // Parms = cat( Parms, (NumericVector)rep(0., n+1-Parms.size()) );
-			// }
-			
-			// if(X.nrow() > n || X.ncol() > m) { 
-				// std::printf("Number or prior values exceed requirement for AR(%d) process; some inputs will be ignored.", n);
-				// }
-			// if(X.nrow() < n || X.ncol() < m) { 
-				// std::printf("Required number of prior values for AR(%d) process exceed number provided; using '0' as default(s).", n);
-				// // X = cat( X, (NumericVector)rep(0., n-X.size()) );
-			// }
-		
-			// NumericMatrix Y(n, m);// = mvrnorm( rep(0., Parms.nrows()), Parms );
-			// for(int i = 0; i < n; i++){
-					// Y += Parms(i) * X(i);
-			// }
-			// return Y + intercept;
+		temp_f = scale(sel, MP_out.F);
+		temp_catch = baranov_catch(Na, temp_f, Ma);
+		MP_out.TAC = yield<T>(temp_catch, Cw);
+	}
+	else if(MP_name == "Elbow C"){
+		T m1 = (.035-.025)/(.6*66.);
+		T b1 = .035-m1*66.;
+		T m2 = (.1-.035)/(66.);
+		T b2 = .1-m2*(2.*66.);
+		MP_out.F = 0.001 +
+				  ( (ssb > .4*66.) & (ssb <= 66.) ) * (m1*ssb+b1) +
+				  ( (ssb > 66.) & (ssb <= 2.*66.) ) * (m2*ssb+b2) +
+				  (ssb > 2.*66.) * .1;
+		temp_catch = baranov_catch(Na, scale(sel, MP_out.F), Ma);
+		MP_out.TAC = yield<T>(temp_catch, Cw);
+	}
+	else if(MP_name == "AGC"){
+		T m1 = (.2-.05)/(66.);
+		T b1 = .2-m1*(2.*66.);
+		MP_out.F = 0.001 +
+				  ( (ssb > .4*66.) & (ssb <= 66.) ) * .05 +
+				  ( (ssb > 66.) & (ssb <= 2.*66.) ) * (m1*ssb+b1) +
+				  (ssb > 2.*66.) * .2;
+		temp_catch = baranov_catch(Na, scale(sel, MP_out.F), Ma);
+		MP_out.TAC = yield<T>(temp_catch, Cw);
+	}
+	else if(MP_name == "FFAW"){
+		T m1 = (3.-1.)/(.4*66.);
+		T b1 = 3.-m1*1.2*66.;
+		T m2 = (20.-3.)/(.8*66.);
+		T b2 = 20.-m2*(2.*66.);
+		MP_out.TAC = 0.001 +
+				  ( (ssb > .4*66.) & (ssb <= .8*66.) ) * 1. +
+				  ( (ssb > .8*66.) & (ssb <= 1.2*66.) ) * (m1*ssb+b1) +
+				  ( (ssb > 1.2*66.) & (ssb <= 2.*66.) ) * (m2*ssb+b2) +
+				  (ssb > 2.*66.) * 20.;
+		MP_out.F = solveF(MP_out.TAC, sel, Na, Ma, Cw);
+	}
+	
+	// else if(MP_name == "harvestrate"){
+		// T surplus = (ssb - threshold) * harvestrate;
+		// MP_out.TAC = surplus > 0. ? surplus : 0.;
+		// MP_out.F = solveF(MP_out.TAC, sel, Ma, Na, Cw);
+	// }
+	// else if(MP_name == "f_bracket"){
+		// bool which;
+		// short i = 0;
+		// ssbr_bracket = cat( cat(0., ssbr_bracket), 100.);
+		// for(; i < ssbr_bracket.size(); i++){
+			// which = ( (ssb/66. >= ssbr_bracket(i)) & (ssb/66. < ssbr_bracket(i+1)) );
+			// if(which) { break; }
 		// }
-
-// };
+		// MP_out.F = f_bracket(i);
+		
+		// temp_catch = baranov_catch(Na, scale(sel, MP_out.F), Ma);
+		// MP_out.TAC = yield<T>(temp_catch, Cw);
+	// }
+	// else if(MP_name == "Elbow_PA"){
+		// T m1 = (0.05 - 0.025)/(0.6 * 66.);
+		// T b1 = 0.05 - m1 * 66.;
+		// T m2 = (0.26 - 0.05)/66.;
+		// T b2 = 0.26 - m2 * (2*66.);
+		// MP_out.F =  ( (ssb > 0.4 * 66.) & (ssb <= 66.) ) * (m1 * ssb + b1) +
+					// ( (ssb > 66.) & (ssb <= 2 * 66.) ) * (m2 * ssb + b2) +
+					// (ssb > 2 * 66.) * 0.26;
+					
+		// temp_catch = baranov_catch(Na, scale(sel, MP_out.F), Ma);
+		// MP_out.TAC = yield<T>(temp_catch, Cw);
+	// }
+	// else if(MP_name == "Elbow_Spectrum1"){
+		// T m1 = (0.045 - 0.055)/(0.6 * 66.);
+		// T b1 = 0.055 - m1 * 66.;
+		// T m2 = (0.2 - 0.055)/66.;
+		// T b2 = 0.2 - m2 * (2*66.);
+		// MP_out.F =  ( (ssb > 0.4 * 66.) & (ssb <= 66.) ) * (m1 * ssb + b1) +
+					// ( (ssb > 66.) & (ssb <= 2 * 66.) ) * (m2 * ssb + b2) +
+					// (ssb > 2 * 66.) * 0.2;
+					
+		// temp_catch = baranov_catch(Na, scale(sel, MP_out.F), Ma);
+		// MP_out.TAC = yield<T>(temp_catch, Cw);
+	// }
+	// else if(MP_name == "Elbow_Spectrum2"){
+		// T m1 = (0.07 - 0.03)/(0.6 * 66.);
+		// T b1 = 0.07 - m1 * 66.;
+		// T m2 = (0.2 - 0.07)/66.;
+		// T b2 = 0.2 - m2 * (2*66.);
+		// MP_out.F =  ( (ssb > 0.4 * 66.) & (ssb <= 66.) ) * (m1 * ssb + b1) +
+					// ( (ssb > 66.) & (ssb <= 2 * 66.) ) * (m2 * ssb + b2) +
+					// (ssb > 2 * 66.) * 0.2;
+					
+		// temp_catch = baranov_catch(Na, scale(sel, MP_out.F), Ma);
+		// MP_out.TAC = yield<T>(temp_catch, Cw);
+	// }
+	
+	//return struct object with TAC and F values
+	
+	return MP_out;
+	
+}

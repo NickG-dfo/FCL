@@ -11,14 +11,15 @@ namespace PopSim{
 		RFuncType(void) { Nil = 0; }
 		
 		RFunType& operator= (Rcpp::R_NilValue& call_input){
-			this->Nil = 1;
+			Nil = 1;
 		}
 		RFunType& operator= (Rcpp::Function& call_input){
-			this->Fun = call_input;
+			Fun = call_input;
 		}
 		
-		RFunType operator() (T SSB, NumericVector& parms){
-			return (this->Fun)(_["SSB"] = SSB, _["parms"] = parms);
+		T operator() (T SSB, NumericVector& parms){
+			if(Nil){ std::printf("Warning: No custom function available. Returning 0."); return 0.; }
+			return Fun(SSB, parms);
 			//May not use named elements for function call
 		}
 		
@@ -111,17 +112,20 @@ namespace PopSim{
 		//				---				//
 						
 		String rec_opt;
-		bool kernel_call,
-			 bias_correction,
-			 rkseed;
-		T recruitment;
+		bool kernel_call, //whether or not to use a kernel for parms
+			 bias_correction, //whether or no b-c is needed
+			 rkseed; //whether or not to randomize seed each iter
+		T recruitment; //function
 		
-		const int Y;
-		int yi, kernel_i;
-		NumericMatrix cov, kernel;
-		NumericVector parms;
-		T std_log_r, max_rec;
+		const int Y; //number of sim years
+		int yi, //year, max of Y
+			kernel_i; //kernel index being used
+		const NumericMatrix cov, kernel; //cov and kernel matrices (const)
+		NumericVector parms; //vector of parms values for SRR
+		const T std_log_r, max_rec;
 
+		NumericVector logRy; // This is recruitment values for all years
+		
 		NumericMatrix derive_VCoV(const NumericMatrix &Kernel){
 			
 			// Kernel dimensions should be parms as columns & samples as rows
@@ -212,8 +216,6 @@ namespace PopSim{
 				}
 				
 			}
-			
-			NumericVector logRy; // This is recruitment values for all years
 		
 			NumericVector get_Parms(void){ return parms; }
 			
