@@ -4,11 +4,11 @@ library(RcppArmadillo)
 library(RcppDist)
 library(ggplot2)
 
-setwd('C:/Users/GullageN/Documents/Code/MSELite')
+source('R/CreateData.R')
 
-Rcpp::sourceCpp("C:/Users/GullageN/Documents/Code/src/v1.1/simulation.cpp")
+Rcpp::sourceCpp("src/v1.1/simulation.cpp")
 
-load('OM/m2021_assessment2021C.RData')
+load('data/m2021_assessment2021C.RData')
 
 Create_OM <- function(om, mproj, rproj){
   
@@ -80,7 +80,7 @@ Create_OM <- function(om, mproj, rproj){
   OM$bherr <- sigma(bhfit)
   
   OM$max_S = max(sr.data$ssb)
-  OM$sigmoid_kernel <- as.matrix( read.csv('rawSigmoidkernels/mcmc_sample_assessment.csv') )
+  OM$sigmoid_kernel <- as.matrix( data.table::fread('data/mcmc_sample_assessment.csv') )
   OM$bhsigerr <- median(OM$sigmoid_kernel[,4])
   
   return(OM)
@@ -106,38 +106,14 @@ Create_MP <- function(mp){
   
 }
 
-OM <- Create_OM('assessment', 'termyr', 'BH')
-MP <- Create_MP('FFAW')
-load("WGupdates_1-4-2023/10000sim/OMassessment_MPCatch_Elbow_1_3_20_Mtermyr_RBH_MSElite.Rdata")
 
-OM <- Create_OM('assessment', 'termyr', 'BH')
-MP <- Create_MP('Critical 100')
-load("WGupdates_1-4-2023/NF+NDF/OMassessment_MPprecautionary_Mtermyr_RBH_MSElite.Rdata")
+## Test Examples ##
 
 OM <- Create_OM('assessment', 'termyr', 'SigBH')
-MP <- Create_MP('AGC')
-load("WGupdates_1-4-2023/10000sim/OMassessment_MPElbow_spectrum_0.05_0.05_0.2_Mtermyr_RSigBH_MSElite.Rdata")
+MP <- Create_MP('No fishing')
+load("data/OMassessment_MPno_fishing_Mtermyr_RSigBH_MSElite.Rdata")
 
-obj <- Simulate(OM, MP, 1000, 40)
-
-# obj$All_summary %>%
-#   filter(var %in% c('Fbar')) %>%
-#   pivot_wider(id_cols = c(year, mp) ,values_from = p50, names_from = var) %>%
-#   # dplyr::select(Fbar) %>%
-#   print(n = 50)
-# MSElite$all_summary %>% 
-#   filter(var %in% c('Fbar')) %>% 
-#   pivot_wider(id_cols = c(year, mp) ,values_from = p50, names_from = var) %>% 
-#   # dplyr::select(Fbar) %>% 
-#   print(n = 50)
-
-
-ggplot(obj$Preventable_Decline)+
-  geom_line(aes(x = Year, y = PD))+
-  geom_hline(yintercept = .05, linetype = 2)+
-  xlim(2022, 2047)+
-  theme_bw()
-
+obj <- Simulate(OM, MP, 10000, 40)
 
 obj$All_summary %>% 
   filter(year > 2022 & year < 2048) %>%
@@ -149,9 +125,8 @@ obj$All_summary %>%
           mutate(var = ifelse(var == 'Recruits', 'Rec', var)) %>% 
           dplyr::select(year, var, mp, p50, p5, p10, p90, p95) %>% 
           rename('p05' = p5)) %>% 
-  mutate(mp = factor(mp, levels = c('Catch_Elbow', 'FFAW'), #c('Elbow_spectrum', 'AGC'), #c('precautionary', 'Critical100'),
-                         labels = c('R', 'C++'))) %>% 
-  # filter(mp == 'R') %>% 
+  mutate(mp = factor(mp, levels = c('no_fishing', 'No fishing'),
+                     labels = c('R', 'C++'))) %>% 
   ggplot(aes(x = year, y = p50))+
   geom_line(aes(col = mp))+
   geom_ribbon(aes(ymax = p90, ymin = p10, fill = mp), alpha = .2)+
@@ -160,5 +135,32 @@ obj$All_summary %>%
              ncol = 2, nrow = 2, scales = 'free_y')+
   labs(x = "Year", y = 'Median (80% CIs)')+
   theme_bw()
-  
-gc() #cleanup!
+
+#Critical NDF
+
+OM <- Create_OM('assessment', 'termyr', 'SigBH')
+MP <- Create_MP('Critical 100')
+load("data/OMassessment_MPprecautionary_Mtermyr_RSigBH_MSElite.Rdata")
+
+obj <- Simulate(OM, MP, 10000, 40)
+
+obj$All_summary %>% 
+  filter(year > 2022 & year < 2048) %>%
+  filter(var %in% c('Fbar', 'SSB', 'TAC', 'Rec')) %>% 
+  dplyr::select(year, var, mp, p50, p05, p10, p90, p95) %>%
+  rbind(MSElite$all_summary %>% 
+          filter(year > 2022 & year < 2048) %>%
+          filter(var  %in% c('Fbar', 'SSB', 'TAC', 'Recruits')) %>% 
+          mutate(var = ifelse(var == 'Recruits', 'Rec', var)) %>% 
+          dplyr::select(year, var, mp, p50, p5, p10, p90, p95) %>% 
+          rename('p05' = p5)) %>% 
+  mutate(mp = factor(mp, levels = c('precautionary', 'Critical 100'),
+                     labels = c('R', 'C++'))) %>% 
+  ggplot(aes(x = year, y = p50))+
+  geom_line(aes(col = mp))+
+  geom_ribbon(aes(ymax = p90, ymin = p10, fill = mp), alpha = .2)+
+  guides(col = 'none', fill = guide_legend(title = 'Model'))+
+  facet_wrap(~factor(var, levels = c('Fbar', 'SSB', 'TAC', 'Rec')), 
+             ncol = 2, nrow = 2, scales = 'free_y')+
+  labs(x = "Year", y = 'Median (80% CIs)')+
+  theme_bw()

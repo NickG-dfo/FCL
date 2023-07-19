@@ -281,7 +281,6 @@ NumericVector as_vector(const NumericMatrix &M){
 }
 
 
-
 //quantile function
 
 template<class T>
@@ -394,7 +393,7 @@ T solveF(T TAC, const NumericVector &sel, const NumericVector &Na, const Numeric
 
 // Recruitment functions //
 //functions return logRec because it makes implementation easier
-//make sure all parms are defined in OM for recruitment!//
+//make sure all parms are defined in OM for recruitment!
 
 template<class T>
 T BH(T SSB, const NumericVector &parms){

@@ -11,19 +11,17 @@ namespace PopSim{
 						  Mat,
 						  Stock_wt,
 						  Catch_wt;
-			T* Rec;
+			SR<T> Rec;
 		
 		public:	
 			
-			RP(List &LHC, T* Recruitment){
+			RP(List &LHC, SR<T> Recruitment): Rec(Recruitment){				
 				A = LHC["A"];
 				Mage = LHC["Mort"];
 				Sage = LHC["Sel"];
 				Mat = LHC["Mat"];
 				Stock_wt = LHC["Sw"];
 				Catch_wt = LHC["Cw"];
-				
-				Rec = Recruitment;
 			}
 						
 			SPR(T F){
@@ -44,7 +42,7 @@ namespace PopSim{
 			}
 			
 			T SSBeq(T F){
-				if( str_is( r_obj.Rec_Type(), "Const" ) ){
+				if( str_is( Rec.Rec_Type, "Const" ) ){
 					std::printf("Constant recruitment does not allow equilbirum states.");
 					return 0.;
 				}
@@ -110,21 +108,20 @@ namespace PopSim{
 		//These should initialize as 0.
 		T TAC; 
 		T F;
+		Rcpp::Function MPf;
 		HCR& operator= (const HCR tf){
 			this->TAC = tf.TAC;
 			this->F = tf.F;
 			return *this;
 		}
 		
-		// Maybe this call will operate in C++? //
+		HCR(String MPname){
+			MPf = Rcpp::Function(MPname);
+		}
 		
-		Function *CustomMP_ptr;
-		
-		T CustomMP(NumericVector &args){
-			if(*CustomMP_ptr == R_NilValue){
-				return 0.;
-			}
-			return (*CustomMP_ptr)(args);
+		//But how to change which value input becomes?
+		T Calc(Rcpp::RObject inputs){
+			return Rcpp::as<T>( MPf(inputs) );
 		}
 		
 		// Like TMB, this is a function that will be defined externally //

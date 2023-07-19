@@ -1,30 +1,4 @@
 
-// template<class T>
-// NumericVector calc_logN(const int A, const NumericVector &logN, const NumericVector &Ma, 
-						// const NumericVector &Fa, const NumericVector &PE, T logR){
-
-	// NumericVector new_logN(A);
-	// NumericVector Za(A), logNplus(A);
-	
-	// for(int i = 0; i < A; i++){
-	
-		// Za(i) = Ma(i) + Fa(i);
-		// logNplus(i) = logN(i) - Za(i) + PE(i);
-		
-		// if( (i != 0) & (i != A-1) ){
-			// new_logN(i) = logNplus(i-1);
-		// }
-		
-	// }
-	
-	// new_logN(0) = logR;
-	// new_logN(A-1) = std::log( std::exp(logNplus(A-2)) + std::exp(logNplus(A-1)) );
-	
-	// return new_logN;
-
-// }
-
-
 // SPMSim is called in SPM model ; PopSim is called in AgeModel //
 
 namespace SPMSim{
@@ -47,6 +21,7 @@ namespace SPMSim{
 			T H = Parms["HarvestRate"],
 			  M = Parms["MortalityRate"],
 			  R = Parms["Recruitment"],
+			  C = Parms["Catch"],
 			  G = Parms["GrowthRate"];
 			
 			item++;
@@ -124,7 +99,7 @@ namespace PopSim{
 		NumericMatrix Indices(Y, A);
 		
 		for(int y = 0; y < Y; y++){
-			Indices(y, _) = Nya(y, _) * qya(y, _) * std::exp(-t_y(y) * Zya(y, _));
+			Indices(y, _) = Nya(y, _) * qya(y, _) * Rcpp::exp(-t_y(y) * Zya(y, _));
 		}
 		
 		return Indices;
@@ -212,7 +187,7 @@ namespace PopSim{
 		
 		new_logN = logN - Za + PE;;
 		
-		new_logN(A-1) += new_logN(A-2);
+		new_logN(A-2) += new_logN(A-1); //plus group
 		new_logN.push_front(logR);
 		new_logN.erase(A);
 		
@@ -232,14 +207,17 @@ namespace PopSim{
 				  A = logN.ncol();
 
 		NumericMatrix new_logN(R, A);
+		NumericVector tempN(A+1);
 					  
-		for(int r = 0; r < R; r++){
+		for(int r = 0; r < R; ++r){
 			
-			new_logN(r, _) = logN(r, _) - Zra(r, _) + PE(r);
+			tempN = logN(r, _) - Zra(r, _) + PE(r);
 			
-			new_logN(r, A-1) += new_logN(r, A-2);
-			new_logN(r, _).push_front(logR(r));
-			new_logN(r, _).erase(A);
+			tempN(A-2) += tempN(r, A-1); //plus group
+			tempN.push_front(logR(r));
+			tempN.erase(A);
+			
+			new_logN(r, _) = tempN;
 			
 			//Add regional mixing eventually
 			
@@ -261,14 +239,17 @@ namespace PopSim{
 				  A = logN.ncol();
 					  
 		NumericMatrix new_logN(R, A);
+		NumericVector tempN(A+1);
 					  
-		for(int r = 0; r < R; r++){
+		for(int r = 0; r < R; ++r){
 			
-			new_logN(r, _) = logN(r, _) - Zra(r, _) + PE(r, _);
+			tempN = logN(r, _) - Zra(r, _) + PE(r, _);
 			
-			new_logN(r, A-1) += new_logN(r, A-2);
-			new_logN(r, _).push_front(logR(r));
-			new_logN(r, _).erase(A);
+			tempN(A-2) += tempN(r, A-1); //plus group
+			tempN.push_front(logR(r));
+			tempN.erase(A);
+			
+			new_logN(r, _) = tempN;
 			
 			//Add regional mixing eventually
 			
@@ -280,52 +261,34 @@ namespace PopSim{
 	
 	
 	//Standard VonBertalanffy
-	template<class T>
-	class LaA{
+	// template<class T>
+	// class LaA{
 		
-		//const _A, _Y;
-		int _y;
-		T _Linf, _k, _age0, _L0;
-				
-		// T Inv_VonB(const T Length, const T Linf, const T k, 
-					// const T age0 = 0., const T L0 = 0.){
-			// return (std::log(1. - (Length - L0)/Linf) + age0) / (-k);
-		// }
+		// // const _A, _Y;
+		// // int y;
+		// const T Linf, k, age0, L0;
 		
-		// NumericVector Inv_VonB(const NumericVector Lengths, const T Linf, const T k,
-								// const T age0 = 0., const T L0 = 0.){
-			// return (Rcpp::log(1. - (Lengths - L0)/Linf) + age0) / (-k);
-		// }
+		// public:
 		
-		public:
-		
-			NumericMatrix Lengths;
+			// NumericVector Lengths;
 			
-			LaA(//const int A, const int Y,
-				const T Linf, const T k,
-				const T L0, const T ag0):
-				//_A(A), _Y(Y), 
-				_Linf(Linf), _k(k), _L0(L0), _age0(age0){
-			}
+			// LaA(const T _Linf, const T _k,
+				// const T _L0, const T _age0):
+				// Linf(_Linf), k(_k), L0(_L0), age0(_age0){
+			// }
 			
-			T VonB(T &age, int y = _y){
-				T L = Linf * (1. - std::exp(-k * age - age0)) + L0;
-				if( y == Lengths.size() ){
-					Lengths.push_back( rep(0., _A) );
-				}else if( y > Lengths.size() ){
-					std::printf("Problem pushing back Length Matrix; year index incorrect.")
-					return 0.
-				}
-				Length(y, _).push_back( L ); //Might not work
-				return L;
-			}
+			// T VonB(T &age, int y){
+				// T L = Linf * (1. - std::exp(-k * age - age0)) + L0;
+				// Lengths.push_back(L);
+				// return L;
+			// }
 			
-			NumericVector VonB(NumericVector &ages, int y = _y){
-				NumericVector L = Linf * (1. - Rcpp::exp(-k * ages - age0)) + L0;
-				Length(y, _) = L;
-				return L;
-			}
+			// NumericVector VonB(NumericVector &ages, int y){
+				// NumericVector L = Linf * (1. - Rcpp::exp(-k * ages - age0)) + L0;
+				// Lengths = cat( Lengths, L );
+				// return L;
+			// }
 		
-	};
+	// };
 	
 }

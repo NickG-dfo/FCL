@@ -2,28 +2,30 @@
 namespace PopSim{
 	
 	//Used for calling function depending on NULL type or Function type
-	template<class T>
-	union RFuncType{
+	union RFunType{
 		
 		bool Nil;
 		Rcpp::Function Fun;
 		
-		RFuncType(void) { Nil = 0; }
+		RFunType(void) { Nil = 0; }
 		
-		RFunType& operator= (Rcpp::R_NilValue& call_input){
+		RFunType& operator= (R::R_NilValue& call_input){
 			Nil = 1;
+			return this;
 		}
 		RFunType& operator= (Rcpp::Function& call_input){
 			Fun = call_input;
+			return this;
 		}
 		
-		T operator() (T SSB, NumericVector& parms){
-			if(Nil){ std::printf("Warning: No custom function available. Returning 0."); return 0.; }
-			return Fun(SSB, parms);
-			//May not use named elements for function call
+		double operator() (double SSB, NumericVector& parms){
+				if(Nil){ std::printf("Warning: No custom function available. Returning 0."); return 0.; }
+				return Fun( SSB, parms );
+				// return Fun( (Rcpp::RObject)SSB, (Rcpp::RObject)parms );
+				//May not use named elements for function call
 		}
 		
-	} CallCustomFun ;
+	};
 
 	template<class T>
 	class RP;
@@ -59,7 +61,7 @@ namespace PopSim{
 		T BevertonHoltComp(T SSB, const NumericVector &parms){
 			T h = parms(1) / (4. + parms(1));
 			NumericVector tempparm = {h, parms(1)};
-			return BevertonHolth<T>(SSB, tempparm);
+			return BevertonHolth(SSB, tempparm);
 		}
 		
 		T Ricker(T SSB, const NumericVector &parms){
@@ -78,7 +80,7 @@ namespace PopSim{
 		T RickerComp(T SSB, const NumericVector &parms){
 			T h = std::pow(.2 * parms(0), .8);
 			NumericVector tempparm = {h, parms(1)};
-			return Rickerh<T>(SSB, tempparm);
+			return Rickerh(SSB, tempparm);
 		}
 		
 		T SigmoidBevertonHolt(T SSB, const NumericVector &parms){
@@ -106,16 +108,17 @@ namespace PopSim{
 			return parms(0) * SSB * std::pow(1. - parms(2)*parms(1)*SSB, 1./parms(2));
 		}
 		
-		CustomRecruitment(T SSB, NumericVector &parms) { return 0.; }
+		T CustomRecruitment(T SSB, NumericVector &parms) { return 0.; }
 		
 		
 		//				---				//
 						
 		String rec_opt;
 		bool kernel_call, //whether or not to use a kernel for parms
-			 bias_correction, //whether or no b-c is needed
-			 rkseed; //whether or not to randomize seed each iter
-		T recruitment; //function
+			 bias_correction, //whether or not b-c is needed
+			 rkseed, //whether or not to randomize seed each iter
+			 perror, //whether or not to include parameter uncertainty
+			 rerror; //whether or not to include error in mean recruitment estimates
 		
 		const int Y; //number of sim years
 		int yi, //year, max of Y
@@ -128,7 +131,7 @@ namespace PopSim{
 		
 		NumericMatrix derive_VCoV(const NumericMatrix &Kernel){
 			
-			// Kernel dimensions should be parms as columns & samples as rows
+			// Kernel dimensions should be: parms as columns & samples as rows
 			
 			int i, j, k;
 			const int ncol = Kernel.ncol(),
@@ -161,12 +164,16 @@ namespace PopSim{
 		}
 
 		public:
+		
+			T recruitment; //function
 			
-			SR(const String &Rec_option, const T &R_std, 
+			SR(const List &Rec_option, const T &R_std, 
 			   const List &LHC, // Just for SPR0
-			   const int y, T Max_R, bool bc, bool RKseed): 
+			   const int y, T Max_R, bool bc, bool RKseed,
+			   bool p_err = 1, bool r_err = 1): 
 				rec_opt(Rec_option), std_log_r(R_std), Y(y),
-				max_rec(Max_R), bc(bias_correction), rkseed(RKseed)
+				max_rec(Max_R), bias_correction(bc), rkseed(RKseed),
+				perror(p_err), rerror(r_err)
 				{
 					
 				//Check for 'Function' input in Rec_option
@@ -177,18 +184,17 @@ namespace PopSim{
 					// CustomRecruitment = Rec_option["Function"];
 				// }		
 				//OR... if prior assignment is needed
-				CallCustomFun = Rec_option["Function"];
+				RFunType CallCustomFun = Rec_option["Function"];
 				//This should automatically detect and store either a NULL of Function type
 				if( !CallCustomFun.Nil ){
 					CustomRecruitment = CallCustomFun.Fun;
 				}
-				
 					
 				//Define function and settings
 				SPR0 = RP<T>(LHC, this->recruitment).SPR(0.); // Might work
 				
 				kernel_i = 0;
-				if(rkseed) { kernel_i = (int)R::runif(0, kernel.rows()) }
+				if(rkseed) { kernel_i = (int)R::runif(0, kernel.rows()); }
 				
 				yi = 0;
 				logRy = rep(0., Y); //Might not work because logRy is in public below
@@ -246,14 +252,13 @@ namespace PopSim{
 				kernel_call = 1;
 			}
 			
-			// T logRec(T, bool, bool);
-			T logRec(T S, bool p_err = 1, bool r_err = 1){
+			T logRec(T S){
 				
 				T rec;
 				
 				//Parameter Error		
 				NumericVector inp_parms( parms.size() );
-				if(p_err){
+				if(perror){
 					if(kernel_call){ 
 						inp_parms = kernel( (int)R::runif(0, kernel.rows()), _ );		
 					}else{
@@ -261,40 +266,40 @@ namespace PopSim{
 					}
 				}else{
 					if(kernel_call){ 
-						inp_parms = kernel( kernel_i, _ );	// kernel with no parm error will randomize parm
+						inp_parms = kernel( kernel_i, _ );	// kernel with p_err = F will always use first row in kernel
 					}else{
 						inp_parms = parms;
 					}
 				}
 				
 				//Recruitment Estimate
-				if( is_in(rec_opt, SRRs_require_SPR0) ){ //check is rec_opt is in StringVector of SRR names
-					rec = std::log( recruitment(S, inp_parms, spr0) ) // this spr0 is a nuisance
-					//Find a better way to do this...
-				}else{
-					rec = std::log( recruitment(S, inp_parms) );
-				}
+				// if( is_in(rec_opt, SRRs_require_SPR0) ){ //check is rec_opt is in StringVector of SRR names
+					// rec = std::log( recruitment(S, inp_parms, spr0) ) // this spr0 is a nuisance
+					// //Find a better way to do this...
+				// }else{
+				rec = std::log( recruitment(S, inp_parms) );
+				// }
 				
 				//Recruitment Error
-				rec += R::rnorm(0., std_log_r) * r_err;
+				rec += R::rnorm(0., std_log_r) * rerror;
 				
 				if(rec > max_rec) { rec = max_rec; }
-				if(bc) { rec -= std::pow(b_sigma, 2.) / 2.; }
+				if(bias_correction) { rec -= std_log_r*std_log_r / 2.; }
 		
 				logRy(yi) = rec;
-				++yi;				
+				yi++;				
 				
 				return rec;
 				
 			}
 			
-			T Rec(T S, bool p_err = 1, bool r_err = 1){
+			// T Rec(T S, bool p_err = 1, bool r_err = 1){
 				
-				return std::exp( logRec(S, p_err, r_err) );
+				// return std::exp( logRec(S) );
 				
-			}
+			// }
 			
-			void clear(void) { yi = 0; }
+			// void clear(void) { yi = 0; }
 			
 			String Rec_Type(void) { return rec_opt; }
 			
