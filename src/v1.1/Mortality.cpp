@@ -14,7 +14,6 @@
 			  err_age,
 			  err_year;
 			NumericVector Mbase,
-						  Mstd, // Base error efect for each age (can set to 0. if uneeded, or set Error value to 0)
 						  Mcond, // loglinear year effect applied to all ages
 						  //Age and Year effects are numeric vectors of length A and Y, respectively
 						  //but if they are only length 1 they will be the same for each age/year
@@ -26,6 +25,12 @@
 								 // Mcorr uses (0, 0) value for AR1d
 								 // Mcorr uses upper-left matrix for AR2d
 								 // Mcorr uses full matrix for AR3d
+			List Mstd;  //Error effects -- list of vectors for each Error type across ages
+			NumericVector Mcond_std,
+						  Maeffect_std,
+						  Myeffect_std,
+						  Mcorr_std;
+						  //(can set to 0. if uneeded, or set Error value to 0)
 				
 			const String corrtype; //this will be either: a, y, r, ya, ra, ry, rya
 			
@@ -41,7 +46,13 @@
 				A = MInfo["A"];
 				Ages = MInfo["Ages"]; //This might be unnecessary
 				Mbase = MInfo["base"]; //This should be a vector of length A
+				
 				Mstd = MInfo["std"]; //This should be a vector  with same length/names as Error
+				Mcond_std = Mstd["condition"];
+				Maeffect_std = Mstd["age_effect"];
+				Myeffect_std = Mstd["Myear_effect"];
+				Mcorr_std = Mstd["Mcorr_std"];
+				
 				Mcond = MInfo["condition"];
 				Maeffect = MInfo["age_effect"];
 				Myeffect = MInfo["year_effect"];
@@ -68,19 +79,19 @@
 			void MCondition(int y){
 				
 				// Call MAgeEffect after condition, since condition applies to age effect! //
-				Maeffect = Maeffect * ( Mcond(y) +  R::rnorm( 0., Mstd["condition"] ) * err_cond );
+				Maeffect = Maeffect * ( Mcond +  R::rnorm( 0., Mcond_std ) * err_cond );
 				
 			}
 			
 			void MAgeEffect(int y){
 				
-				Mya(y, _) = Mya(y, _) + Maeffect +  R::rnorm( 0., Mstd["age_effect"] ) * err_age;
+				Mya(y, _) = Mya(y, _) + Maeffect +  R::rnorm( 0., Maeffect_std ) * err_age;
 				
 			}
 			
 			void MYearEffect(int y){
 				
-				Mya(y, _) = Mya(y, _) + Myeffect(y) +  R::rnorm( 0., Mstd["year_effect"] ) * err_year;
+				Mya(y, _) = Mya(y, _) + Myeffect(y) +  R::rnorm( 0., Myeffect_std ) * err_year;
 			
 			}
 			
@@ -89,7 +100,7 @@
 				AR1d AR(n);
 				AR2d AR2(n);
 				// AR3d ARrya(3)
-				T Sigma = Mstd["correlates"];
+				NumericVector Sigma = Mcorr_std;
 				
 				T Mcorr_a = Mcorr(0, 0),
 				  Mcorr_y = Mcorr(1, 1),

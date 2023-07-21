@@ -443,30 +443,30 @@ namespace PopSim{
 			
 	};
 	
-	class NumericArray{
+	// class NumericArray{
 		
-			std::vector<NumericMatrix*> storage;
+			// std::vector<NumericMatrix*> storage;
 		
-		public:
+		// public:
 		
-			NumericArray(int slices, int rows, int cols){
-				for(int i = 0; i < slices; i++){
-					storage(i) = &NumericMatrix(rows, cols);
-				}
-			}
+			// NumericArray(int slices, int rows, int cols){
+				// for(int i = 0; i < slices; i++){
+					// storage(i) = &NumericMatrix(rows, cols);
+				// }
+			// }
 		
-			NumericMatrix operator() (int slice){
-				return *storage(slice);
-			}
-			NumericVector operator() (int slice, int row){
-				return (*storage(slice))(row, _);
-			}
-			double operator() (int slice, int row, int col){
-				return (*storage(slice))(row, col);
-			}
-			}
+			// NumericMatrix operator() (int slice){
+				// return *storage(slice);
+			// }
+			// NumericVector operator() (int slice, int row){
+				// return (*storage(slice))(row, _);
+			// }
+			// double operator() (int slice, int row, int col){
+				// return (*storage(slice))(row, col);
+			// }
+			// }
 		
-	};
+	// };
 
 	//This function converts arma rmvnorm to a Rcpp equivalent
 	NumericVector mvrnorm(const NumericVector &mu, const NumericMatrix &S){

@@ -102,27 +102,27 @@ namespace PopSim{
 	};
 
 	//Define struct object called HCR for MP functions and values
-	template<class T>
-	struct HCR{
+	// template<class T>
+	// struct HCR{
 		
-		//These should initialize as 0.
-		T TAC; 
-		T F;
-		Rcpp::Function MPf;
-		HCR& operator= (const HCR tf){
-			this->TAC = tf.TAC;
-			this->F = tf.F;
-			return *this;
-		}
+		// //These should initialize as 0.
+		// T TAC; 
+		// T F;
+		// Rcpp::Function MPf;
+		// HCR& operator= (const HCR tf){
+			// this->TAC = tf.TAC;
+			// this->F = tf.F;
+			// return *this;
+		// }
 		
-		HCR(String MPname){
-			MPf = Rcpp::Function(MPname);
-		}
+		// HCR(String MPname){
+			// MPf = Rcpp::Function(MPname);
+		// }
 		
-		//But how to change which value input becomes?
-		T Calc(Rcpp::RObject inputs){
-			return Rcpp::as<T>( MPf(inputs) );
-		}
+		// //But how to change which value input becomes?
+		// T Calc(Rcpp::RObject inputs){
+			// return Rcpp::as<T>( MPf(inputs) );
+		// }
 		
 		// Like TMB, this is a function that will be defined externally //
 		
@@ -153,6 +153,6 @@ namespace PopSim{
 		//		i.e. n = 0 for SSB, n = 1 for Selectivity, and n = 2 for Closure
 		
 		
-	};
+	// };
 
 }

@@ -52,6 +52,7 @@ namespace PopSim{
 			F_obj(NumericVector Mu, F_type Std, 
 				  bool Error, bool exp_Error):
 				Mu(Mu), e(Error), ee(exp_Error){
+				_A = Mu.size();
 				mvn = Std.size(); //size() will be 0 if a matrix
 				N_sigma = Std._V;
 				MVN_Sigma = Std._M;

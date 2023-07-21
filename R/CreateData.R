@@ -3,61 +3,54 @@ Create_OM <- function(){
 
   OM_data <- list(
     #Integers
-    'SR_lag',
-    'y0',
-    'ymp',
+    'SR_lag' = NULL,
+    'ymp' = NULL,
     #Numeric Atomics
-    'PE_std',
-    'terminalYield',
-    'Rstd',
-    'Min_Catch',
-    'TAC_Error',
-    'Max_Rec',
+    'terminalYield' = NULL,
+    'Rstd' = NULL,
+    'Max_Rec' = NULL,
     #Strings
-    'Model_Name',
-    'Mortality_Name',
-    'Recruitment_Name',
-    'Rparm_type',
+    'Model_Name' = NULL,
+    'Mortality_Name' = NULL,
+    'Recruitment_Name' = NULL,
+    'Rparm_type' = NULL,
     #Numeric Vectors
-    'Catch_wt',
-    'Stock_wt',
-    'Maturity',
-    'N1',
-    'Rparameters',
-    'F_Mu',
-    'Selectivity',
-    'terminalF',
-    'terminalM',
-    'Mpar_est',
-    'Mpar_sd',
-    'PE_Std',
-    'TAC0',
+    'Catch_wt' = NULL,
+    'Stock_wt' = NULL,
+    'Maturity' = NULL,
+    'N1' = NULL,
+    'Rparameters' = NULL,
+    'F_Mu' = NULL,
+    'Selectivity' = NULL,
+    'terminalF' = NULL,
+    'terminalM' = NULL,
+    'PE_Std' = NULL,
     #Integer Vectors
-    'Fbar_ind',
-    'Mbar_ind',
+    'Fbar_ind' = NULL,
+    'Mbar_ind' = NULL,
     #Numeric Matrices
-    'RCoV',
-    'RKernel',
-    'Nrec',
+    'RCoV' = NULL,
+    'RKernel' = NULL,
+    'Nrec' = NULL,
     #Numeric Vector or Matrix
-    'F_sigma',
+    'F_sigma' = NULL,
     #Function
-    'SR_function'
+    'SR_function' = NULL
   )
   
   OM_data$Minfo <- list(
     #Integers
-    'A',
+    'A' = NULL,
     #Numeric Vectors
-    'Ages',
-    'base',
-    'std',
+    'Ages' = NULL,
+    'base' = NULL,
+    'std' = NULL,
     #Numeric Atomics
-    'condition', #size Y
-    'age_effect', #size A
-    'year_effect', #size Y
+    'condition' = NULL, #size Y
+    'age_effect' = NULL, #size A
+    'year_effect' = NULL, #size Y
     #Numeric Matrix
-    'correlates', #AR matrix
+    'correlates' = NULL #3x3 AR matrix
   )
   
   OM_data$Minfo$error_type <- c(
@@ -70,34 +63,36 @@ Create_OM <- function(){
   )
   
   OM_data$Rec_settings <- c(
-    'Rparm_error', #logical
-    'R_error', #logical
-    'bias_correction', #logical
-    'RKseed', #logical
+    'Rparm_error' = T, #logical
+    'R_error' = T, #logical
+    'bias_correction' = F, #logical
+    'Kernel_seed' = F #logical
   )
   
   OM_data$F_settings <- c(
-    'F_error', #logical
-    'F_experror' #logical
+    'F_error' = T, #logical
+    'F_experror' = F #logical
   )
   
   OM_data$Mort_settings <- c(
-    'condition', #logical
-    'age', #logical
-    'year', #logical
-    'AR' #logical
+    'condition' = T, #logical
+    'age' = F, #logical
+    'year' = F, #logical
+    'AR' = F #logical
   )
   
   MP_data <- list(
     
-    'Name', #string
-    'Type', #bool -- if True MP outputs F, otherwise TAC
-    'y0', #int
-    'delay', #int
-    'Cmin', #double
-    'TAC_Error', #double
-    'TAC0', #double
-    'Function' #string -- name of function for MP in R
+    'Name' = NULL, #string
+    'F_type' = NULL, #bool -- if True MP outputs F, otherwise TAC
+    #'y0' = NULL, #int
+    'delay' = NULL, #int
+    'Cmin' = NULL, #double
+    'TAC_Error' = NULL, #double
+    'TAC0' = NULL, #double
+    'Function' = NULL, #string -- name of function for MP in R
+    'MP_inputs' = NULL #this can be any type, but must be the only argument to Function
+                #e.g. list, vector, numeric, string, etc.
     
   )
   

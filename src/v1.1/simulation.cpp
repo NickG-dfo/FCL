@@ -46,7 +46,7 @@ List AgeModel(  List OM,
 	// Call OM and MP elements //
 	
 	int r_lag = OM["SR_lag"], // Age of 'recruitment' (or minimum in age model, against which an SRR is modeled)
-		y0 = MP["y0"], // Number of years with pre-defined TAC/F
+		// y0 = MP["y0"], // Number of years with pre-defined TAC/F
 		ymp = MP["delay"]; // this is delay on MP implementation -- either 0 or 1 year
 	
 	T terminalYield = OM["terminalYield"], // Yield from last year of assessment (or most recent Yield)
@@ -101,6 +101,11 @@ List AgeModel(  List OM,
 	RFunType Custom_SR = OM["SR_function"];
 	List R_info = List::create(Named("Name") = R_name, Named("Function") = Custom_SR);
 	
+	bool MP_Type = MP["F_type"];
+	String MP_Function = MP["Function"];
+	Rcpp::RObject MP_inputs  MP["MP_inputs"];
+	Rcpp::Function(MP_Function); //defining MP function
+	
 	//			-------------------			  //
 			
 	// Swtiches //		 
@@ -121,6 +126,7 @@ List AgeModel(  List OM,
 	
 	const int A = OM["A"]; // A isn't needed but makes some implementation easier (length of Age vector, not max age)
 	int y, a, sim; //for loop values
+	int y0 - TAC0.size();
 	
 	IntegerVector years = OM["years"]; //all years in assessment (may remove and just read last year)
 	int years1 = years(years.size()-1); //last year of assessment = first year of the MSE
@@ -193,8 +199,8 @@ List AgeModel(  List OM,
 	RP<T> RP_obj( LHC_list, Rec_obj );	//Object for Reference Points	
 	
 	//MP Stuff//
-	HCR<T> MP_obj; //Object for HCR outputs/functions
-	Rcpp::RObject MP_inputs = MP["Function"]
+	// HCR<T> MP_obj; //Object for HCR outputs/functions
+	// Rcpp::RObject MP_inputs = MP["Function"]
 	
 	//Fishing Mortality Stuff//
 	F_obj<T> Fya_obj( F_mu, F_std, F_error, F_experror ); //Hopefully this reads F_type for F_std
@@ -299,14 +305,24 @@ List AgeModel(  List OM,
 						
 			if(y < y0){ //Fixed TAC/F years
 			
-				TAC(y) = TAC0(y);
-				Fbar(y) = solveF( TAC(y), Fya_obj.Fya(y, _), Nage(y, _), Mya_obj.Mya(y, _), Catch_wt );
-
+				TAC(y) = TAC0(y);			// init F -v-
+				Fbar(y) = solveF( TAC(y), Fya_obj.Fya(y-1, _), Nage(y, _), Mya_obj.Mya(y, _), Catch_wt );
+				
 			}else{ //Years for Variable MPs	
 			
-				MP_obj.Calc(MP_inputs);
-				Fbar(y) = MP_obj.F;
-				TAC(y) = MP_obj.TAC;
+				if(MP_type){
+					
+					Fbar(y) = MP_Function(MP_inputs);
+					TAC(y) = yield( baranov_catch(Nage(y, _), Fya_obj.Fya(y, _), Mya_obj.Mya(y, _)), Catch_wt );
+					
+				}else if(!MP_type){					
+				
+					TAC(y) = yield( baranov_catch(Nage(y, _), Fya_obj.Fya(y, _), Mya_obj.Mya(y, _)), Catch_wt );
+					TAC(y) = TAC(y) < Cmin ? Cmin : TAC(y);
+					TAC(y) *= std::exp( R::rnorm(0., TAC_Error) );
+					Fbar(y) = solveF( TAC(y), Fya_obj.Fya(y-1, _), Nage(y, _), Mya_obj.Mya(y, _), Catch_wt );
+					
+				}
 
 				// MP_obj.F_MP( SSB(y - ymp), list_of_MPs.offset( MP_name ) );
 				// MP_obj.TAC_MP( SSB(y - ymp), list_of_MPs.offset( MP_name ) );
@@ -322,13 +338,13 @@ List AgeModel(  List OM,
 				
 			}	
 			// If TAC is too low, set minimum to Cmin
-			if( !str_is(mp, "No fishing") | (TAC(y) < Cmin) ) {
-				TAC(y) = Cmin;
-				Fbar(y) = solveF( TAC(y), Fya_obj.Fya(y, _), Nage(y, _), Mya_obj.Mya(y, _), Catch_wt );
-			}			
+			// if( !str_is(mp, "No fishing") | (TAC(y) < Cmin) ) {
+				// TAC(y) = Cmin;
+				// Fbar(y) = solveF( TAC(y), Fya_obj.Fya(y, _), Nage(y, _), Mya_obj.Mya(y, _), Catch_wt );
+			// }			
 						
 			// Fishing Mortality
-			Fya_obj(Fbar(y));	
+			Fya_obj(Fbar(y));
 
 			// Fill containers
 			Bage(y, _) = Nage(y, _) * Stock_wt;
@@ -337,7 +353,7 @@ List AgeModel(  List OM,
 			// Fage(y, _) = Fbar(y) * Fya_obj.Sel;
 			Zage(y, _) = Fya_obj.Fya(y, _) + Mya_obj.Mya(y, _);
 			Cage(y, _) = baranov_catch(Nage(y, _), Fya_obj.Fya(y, _), Mya_obj.Mya(y, _)) // Nage(y, _) * (1. - std::exp(-Zage(y, _))) * Fage(y, _) / Zage(y, a);
-			Yage(y, _) = Cage(y, _) * Catch_wt; // Cage(y, a) * Catch_wt(a);			
+			Yage(y, _) = Cage(y, _) * Catch_wt; // Cage(y, a) * Catch_wt(a);
 						
 			Fbar_top = 0.;
 			Fbar_bot = 0.;
@@ -352,10 +368,14 @@ List AgeModel(  List OM,
 				Mbar_bot += ( (a > Mbar_ind(0)) & (a < Mbar_ind(1)) ) * Nage(y, a);
 				
 			}
-								
+			
+			Fbar_popwt(y) = Fbar_top / Fbar_bot;
+			Mbar_popwt(y) = Mbar_top / Mbar_bot;					
+					
 			Abundance(y) = sum(Nage(y, _));
 			Ydiff(y) = sum(Yage(y, _) - Yage(y-1, _));
 			Yield(y) = sumYage(y, _));
+			TAC_disp(y) = TAC(y) - Yield(y);
 			Biomass(y) = sum(Bage(y, _));
 			SSB(y) = sum(SSBage(y, _));
 			
@@ -363,9 +383,6 @@ List AgeModel(  List OM,
 			YaA(sim, y, a) = Yage(y, a);
 			BaA(sim, y, a) = SSBage(y, a);
 			SaA(sim, y, a) = Bage(y, a);
-			
-			Fbar_popwt(y) = Fbar_top / Fbar_bot;
-			Mbar_popwt(y) = Mbar_top / Mbar_bot;
 			
 		} // end projection
 		
@@ -384,6 +401,11 @@ List AgeModel(  List OM,
 	} // end simulation
 	
 	return  List::create(
+			Named("OM") = OM_name,
+			Named("Mort") = Mortality_Name,
+			Named("Rec") = Recruitment_Name,
+			Named("MP") = MP_name,
+	
 			Named("TAC") = all_TAC,
 			Named("Fbar") = all_Fbar,
 			Named("Fbar_popwt") = all_Fbar_popwt,
