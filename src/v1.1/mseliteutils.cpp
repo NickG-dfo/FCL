@@ -1,5 +1,5 @@
 
-namespace PopSim{
+namespace mseutils{
 
 	// Simple Functions //
 
@@ -302,6 +302,21 @@ namespace PopSim{
 		return sub_Mat;
 	}
 
+	NumericVector rnorm(NumericVector Mu, NumericVector Sig){
+		
+		int n = Mu.size();
+		if(n != Sig.size()){
+			std::printf("Mu and Sig must be of equal length for this rnorm.");
+			return NumericVector(0);
+		}
+		
+		NumericVector X(n);
+		for(int i = 0; i < n; i++){
+			X(i) = R::rnorm(Mu(i), Sig(i));
+		}
+		return X;
+		
+	}
 
 	// -------------------------------------------------------------------------------------------------//
 
@@ -325,7 +340,7 @@ namespace PopSim{
 	}
 
 	template<class T>
-	T yield(NumericVector catches, const NumericVector &Cw){
+	T yield(NumericVector catches, NumericVector& Cw){
 		
 		for(int i = 0; i < catches.size(); i++){
 			catches(i) *= Cw(i);
@@ -517,7 +532,7 @@ namespace PopSim{
 			}
 			
 			//NumericVector should be length of n, so AR(1) X is a vector of length 1
-			NumericVector operator() (NumericVector &X, NumericVector &phi, const double &sig = 0.){
+			NumericVector operator() (NumericVector X, NumericVector phi, double sig){
 				
 				if(phi.size() > n) { 
 					std::printf("Number or parameters provided exceeded requirement for AR(%d) process; some parameters will be ignored.", n); }
@@ -538,7 +553,7 @@ namespace PopSim{
 				}
 			
 				NumericVector ARsig = sig / Rcpp::sqrt( 1.-phi*phi );
-				NumericVector noise = Rcpp::rnorm(rep(0., n), ARsig);
+				NumericVector noise = rnorm(rep(0., n), ARsig);
 				for(int i = 0; i < nforward; i++){
 					if(i < n){
 						Y(i) = X(i);

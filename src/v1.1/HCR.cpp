@@ -5,7 +5,7 @@ namespace PopSim{
 	template<class T>
 	class RP{
 		
-			const int A;
+			int A;
 			NumericVector Mage,
 						  Sage, 
 						  Mat,
@@ -51,8 +51,8 @@ namespace PopSim{
 				  Si = 1.;
 				T y, dy;
 				do{
-					y = ((*Rec)(Si, 0, 0)*SPR(F) - Si);
-					dy = ((*Rec)(Si+.01, 0, 0)*SPR(F) - (*Rec)(Si-.01, 0, 0)*SPR(F))/.02 - 1.;
+					y = ((*Rec->recruitment)(Si, 0, 0)*SPR(F) - Si);
+					dy = ((*Rec->recruitment)(Si+.01, 0, 0)*SPR(F) - (*Rec->recruitment)(Si-.01, 0, 0)*SPR(F))/.02 - 1.;
 					delta = dy/y;
 					Si -= delta;
 				} while(delta > .001);
@@ -100,6 +100,9 @@ namespace PopSim{
 			}
 		
 	};
+
+	template<class T>
+	T MP_decision(T, NumericVector);
 
 	//Define struct object called HCR for MP functions and values
 	// template<class T>

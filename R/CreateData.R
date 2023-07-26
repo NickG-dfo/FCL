@@ -4,7 +4,7 @@ Create_OM <- function(){
   OM_data <- list(
     #Integers
     'SR_lag' = NULL,
-    'ymp' = NULL,
+    # 'ymp' = NULL,
     #Numeric Atomics
     'terminalYield' = NULL,
     'Rstd' = NULL,
@@ -35,7 +35,7 @@ Create_OM <- function(){
     #Numeric Vector or Matrix
     'F_sigma' = NULL,
     #Function
-    'SR_function' = NULL
+    # 'SR_function' = NULL
   )
   
   OM_data$Minfo <- list(
@@ -43,24 +43,33 @@ Create_OM <- function(){
     'A' = NULL,
     #Numeric Vectors
     'Ages' = NULL,
-    'base' = NULL,
-    'std' = NULL,
     #Numeric Atomics
-    'condition' = NULL, #size Y
+    'base' = NULL, #size A
+    'condition' = NULL, #size A
     'age_effect' = NULL, #size A
     'year_effect' = NULL, #size Y
     #Numeric Matrix
     'correlates' = NULL #3x3 AR matrix
   )
   
-  OM_data$Minfo$error_type <- c(
-    #Logicals
-    'base' = T,
-    'condition' = F,
-    'age_effect' = F,
-    'year_effect' = F,
-    'correlates' = F
+  OM_data$Minfo$std <- list(
+    #Numeric Vectors
+    'base' = NULL, #size A
+    'condition' = NULL, #size Y
+    'age_effect' = NULL, #size A
+    'year_effect' = NULL, #size Y
+    #Numeric Matrix
+    'correlates' = NULL #size 3x3
   )
+  
+  # OM_data$Minfo$error_type <- c(
+  #   #Logicals
+  #   'base' = T,
+  #   'condition' = F,
+  #   'age_effect' = F,
+  #   'year_effect' = F,
+  #   'correlates' = F
+  # )
   
   OM_data$Rec_settings <- c(
     'Rparm_error' = T, #logical
@@ -84,14 +93,14 @@ Create_OM <- function(){
   MP_data <- list(
     
     'Name' = NULL, #string
-    'F_type' = NULL, #bool -- if True MP outputs F, otherwise TAC
+    'F_MP' = TRUE, #bool -- if True MP outputs F, otherwise TAC
     #'y0' = NULL, #int
     'delay' = NULL, #int
     'Cmin' = NULL, #double
     'TAC_Error' = NULL, #double
-    'TAC0' = NULL, #double
-    'Function' = NULL, #string -- name of function for MP in R
-    'MP_inputs' = NULL #this can be any type, but must be the only argument to Function
+    'TAC0' = NULL #double
+    # 'Function' = NULL, #string -- name of function for MP in R
+    # 'MP_inputs' = NULL #this can be any type, but must be the only argument to Function
                 #e.g. list, vector, numeric, string, etc.
     
   )

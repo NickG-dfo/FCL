@@ -4,7 +4,7 @@ library(RcppArmadillo)
 library(RcppDist)
 library(ggplot2)
 
-Rcpp::sourceCpp("src/v1.1/simulation.cpp")
+Rcpp::sourceCpp("src/v1.1/MP_blank.cpp")
 
 source('MP_function.R')
 source('R_function.R')
@@ -59,7 +59,7 @@ OM$terminalYield = m$rep$pred_landings[Y]
 OM$PE_Std = exp(m$opt$par[names(m$opt$par) == 'log_std_s'])
 OM$Fbar_ind = c(3:7) #ages 5-9
 OM$Mbar_ind = c(3:7) #ages 5-9
-OM$SR_lag = 0
+OM$SR_lag = 1
 OM$Rparameters = BH_parms
 OM$Rstd = exp(m$opt$par['log_std_log_R'])
 OM$Rparm_type = 'use_CoV' #or use_Kernel, or find_CoV
@@ -72,11 +72,23 @@ OM$SR_function = 'Rec_function'
 OM$Minfo$A = m$tmb.data$A
 OM$Minfo$Ages = c(2:12)
 OM$Minfo$base = rep(.3, A)
-OM$Minfo$std = summary(m$sd.rep)%>%as_tibble(rownames="parm")%>%
+
+OM$Minfo$std$base =
+  summary(m$sd.rep)%>%as_tibble(rownames="parm")%>%
   rename(estimate="Estimate",SE="Std. Error") %>% as.data.frame() %>% 
   filter(parm=="mpar") %>% dplyr::select(SE) %>% unlist() %>% 
   `[`((m$tmb.data$imest$keyM[1:A]+1)[1:A])
-OM$Minfo$condition = 
+
+#MP list
+MP$Name = 'No Fishing'
+MP$F_type = 1
+MP$delay = 1
+MP$Cmin = 0
+MP$TAC_Error = 0
+MP$TAC0 = 1346
+MP$Function = 'MP_function'
+MP$MP_inputs = NULL
+
 
 #MP List
 OM$ymp = 1
