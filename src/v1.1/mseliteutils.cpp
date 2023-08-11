@@ -8,13 +8,14 @@ namespace mseutils{
 		std::string string1 = String1.get_cstring();
 		std::string string2 = String2.get_cstring();
 		//first check if strings of of same length
-		bool out = (string1.size() == string2.size());
-		if( !out ){ return false; }
-		//then check each element to see if they match
-		for(unsigned int i = 0; i < string1.size(); i++){
-			out &= string1[i] == string2[i];
-		}
-		return out;
+		// bool out = (string1.size() == string2.size());
+		// if( !out ){ return false; }
+		// //then check each element to see if they match
+		// for(unsigned int i = 0; i < string1.size(); i++){
+			// out &= string1[i] == string2[i];
+		// }
+		// return out;
+		return (bool)string1.compare(string2);
 		
 	}
 

@@ -121,14 +121,14 @@
 				// If AR1d process is ON, might have to do it first before other M components
 				if( str_is(corrtype, "a") ){
 					// for(a = 1; a < A; a++){						
-						Mya(y, _) = AR( Mya(y, _), rep((T)Mcorr_a, A), (T)Sigma(0,0) );
+						Mya(y, _) = AR( Mya(y, _), rep(Mcorr_a, A), (T)Sigma(0,0) );
 					// }
 				}else if( str_is(corrtype, "y") ){
 					// for(y = 1; y < Y; y++){
-						Mya(_, a) = AR( Mya(_, a), rep((T)Mcorr_y, A), (T)Sigma(1,1) );
+						Mya(_, a) = AR( Mya(_, a), rep(Mcorr_y, A), (T)Sigma(1,1) );
 					// }
 				}else if( str_is(corrtype, "r") ){
-						Mya(_, a) = AR( Mya(_, a), rep((T)Mcorr_r, A), (T)Sigma(2,2) );
+						Mya(_, a) = AR( Mya(_, a), rep(Mcorr_r, A), (T)Sigma(2,2) );
 				}
 				// }else if( str_is(corrtype, "ya") ){
 					// for(y = 1; y < Y; y++){

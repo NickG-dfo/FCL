@@ -1,46 +1,96 @@
 
 namespace PopSim{
-	
-	//Used for calling function depending on NULL type or Function type
-	// union RFunType{
-		
-		// bool Nil;
-		// Rcpp::Function Fun;
-		
-		// RFunType(void) { Nil = 0; }
-		
-		// RFunType& operator= (Rcpp::Function& call_input){
-			// Fun = call_input;
-			// return *this;
-		// }
-		// RFunType& operator= (Rcpp::RObject call_input){
-			// if(call_input == R_NilValue){
-				// Nil = 1;
-			// }else{
-				// std::printf("Unusable value for RFunType.");
-			// }
-			// return *this;
-		// }
-		
-		// double operator() (double SSB, NumericVector& parms){
-				// if(Nil){ std::printf("Warning: No custom function available. Returning 0."); return 0.; }
-				// return Fun( SSB, parms );
-				// // return Fun( (Rcpp::RObject)SSB, (Rcpp::RObject)parms );
-				// //May not use named elements for function call
-		// }
-		
-	// };
 
 	template<class T>
 	class RP;
+	
+	//For steepness formulations, parms(0) is 'h' and parms(1) is 'S0'
+	//For shepherd and SigmoidBH, parms(2) is 'c'
+	
+	// template<class T>
+	// T Constant(T SSB, NumericVector &parms){
+		// return parms(0);
+	// }
+	
+	// template<class T>
+	// T BevertonHolt1(T SSB, NumericVector &parms){
+		// return SSB * parms(0) / (parms(1) + SSB);
+	// }
+	
+	// template<class T>
+	// T BevertonHolt2(T SSB, NumericVector &parms){
+		// return SSB * parms(0) / (1. + parms(1) * SSB);
+	// }
+	
+	// template<class T>
+	// T BevertonHolth(T SSB, NumericVector &parms){
+		// T h = parms(0),
+		  // R0 = parms(1);
+		// return .8*R0*h*SSB / (.2*SPR0*R0*(1.-h) + (h-.2)*SSB);
+	// }
+	
+	// template<class T>
+	// T BevertonHoltComp(T SSB, NumericVector &parms){
+		// T h = parms(1) / (4. + parms(1));
+		// NumericVector tempparm = {h, parms(1)};
+		// return BevertonHolth(SSB, tempparm);
+	// }
+	
+	// template<class T>
+	// T Ricker(T SSB, NumericVector &parms){
+		// return parms(0) * SSB * std::exp( -parms(1) * SSB );
+	// }
+	
+	// template<class T>
+	// T Rickerh(T SSB, NumericVector &parms){
+		// T b = std::log(5. * parms(0)) / (.8 * parms(1)),
+		  // a = std::exp(b * parms(1) / SPR0 );
+		// NumericVector tempparm = {a, b};
+		// return Ricker(SSB, tempparm);
+	// }
+	
+	// template<class T>
+	// T RickerComp(T SSB, NumericVector &parms){
+		// T h = std::pow(.2 * parms(0), .8);
+		// NumericVector tempparm = {h, parms(1)};
+		// return Rickerh(SSB, tempparm);
+	// }
+	
+	// template<class T>
+	// T SigmoidBevertonHolt(T SSB, NumericVector &parms){
+		// return parms(0) * SSB / (1. + std::pow(parms(1) / SSB), parms(2));
+	// }
+	
+	// template<class T>
+	// T Shepherd(T SSB, NumericVector &parms){
+		// return parms(0) * SSB / (1. + std::pow(SSB / parms(1)), parms(2));
+	// }
+	
+	// template<class T>
+	// T Shepherdh(T SSB, NumericVector &parms){
+		// T b = parms(1) * ((.2 - parms(0)) / (parms(0) * std::pow(.2, parms(2)) - .2)) * (-1./parms(2)),
+		  // a = (1. + std::pow(parms(1)/b), parms(2)) / SPR0;
+		// NumericVector tempparm = {a, b};
+		// return Shepherd(SSB, tempparm); // a * SSB / (1. + std::pow(SSB / b), parms(2));
+	// }
+	
+	// template<class T>
+	// T Schaefer(T SSB, NumericVector &parms){
+		// return parms(0) * SSB * (1. - parms(1) * SSB);
+	// }
+	
+	// template<class T>
+	// T DerisoShnute(T SSB, NumericVector &parms){
+		// return parms(0) * SSB * std::pow(1. - parms(2)*parms(1)*SSB, 1./parms(2));
+	// }
+	
+	// template<class T>
+	// T CustomRecruitment(T, NumericVector&);
 
 	template<class T>
 	class SR{
 		
-		T SPR0;
-
-		//For steepness formulations, parms(0) is 'h' and parms(1) is 'S0'
-		//For shepherd and SigmoidBH, parms(2) is 'c'
+		T SPR0;	
 		
 		T Constant(T SSB, NumericVector &parms){
 			return parms(0);
@@ -108,7 +158,6 @@ namespace PopSim{
 		
 		T CustomRecruitment(T, NumericVector&);
 		
-		
 		//				---				//
 							
 		bool kernel_call; //whether or not to use a kernel for parms
@@ -117,7 +166,7 @@ namespace PopSim{
 		NumericMatrix cov, kernel; //cov and kernel matrices (const)
 		NumericVector parms; //vector of parms values for SRR
 		
-		T recruitment(T, NumericVector&); //function
+		T (*recruitment)(T, NumericVector&); //function
 		
 		//Constructor args//
 		String rec_opt;
@@ -180,47 +229,45 @@ namespace PopSim{
 				//Define function and settings
 				SPR0 = RP<T>(LHC, *this).SPR(0.); // Might work
 				
-				kernel_i = 0;
+				kernel_i = (int)R::runif(0, kernel.rows());
 				if(rkseed) { kernel_i = (int)R::runif(0, kernel.rows()); }
 				
 				yi = 0;
 				logRy = rep(0., Y);
 
 					  if( str_is(Rec_option, "Const") ){ 
-					  T recruitment(T SSB, NumericVector &parms){ return Constant(SSB, parms); }
+					  recruitment = &Constant;
 				}else if( str_is(Rec_option, "BH1") ){ 
-					T recruitment(T SSB, NumericVector &parms){ return BevertonHolt1(SSB, parms); }
+					recruitment = BevertonHolt1;
 				}else if( str_is(Rec_option, "BH2") ){ 
-					T recruitment(T SSB, NumericVector &parms){ return BevertonHolt2(SSB, parms); }
+					recruitment = BevertonHolt2;
 				}else if( str_is(Rec_option, "RK") ){ 
-					T recruitment(T SSB, NumericVector &parms){ return Ricker(SSB, parms); }
+					recruitment = Ricker;
 				}else if( str_is(Rec_option, "BHh") ){ 
-					T recruitment(T SSB, NumericVector &parms){ return BevertonHolth(SSB, parms); }
+					recruitment = BevertonHolth;
 				}else if( str_is(Rec_option, "RKh") ){ 
-					T recruitment(T SSB, NumericVector &parms){ return Rickerh(SSB, parms); }
+					recruitment = Rickerh;
 				}else if( str_is(Rec_option, "BHComp") ){ 
-					T recruitment(T SSB, NumericVector &parms){ return BevertonHoltComp(SSB, parms); }
+					recruitment = BevertonHoltComp;
 				}else if( str_is(Rec_option, "RKComp") ){ 
-					T recruitment(T SSB, NumericVector &parms){ return RickerComp(SSB, parms); }
+					recruitment = RickerComp;
 				}else if( str_is(Rec_option, "SigBH") ){ 
-					T recruitment(T SSB, NumericVector &parms){ return SigmoidBevertonHolt(SSB, parms); }
+					recruitment = SigmoidBevertonHolt;
 				}else if( str_is(Rec_option, "Shepherd") ){ 
-					T recruitment(T SSB, NumericVector &parms){ return Shepherd(SSB, parms); }
+					recruitment = Shepherd;
 				}else if( str_is(Rec_option, "Shepherdh") ){ 
-					T recruitment(T SSB, NumericVector &parms){ return Shepherdh(SSB, parms); }
+					recruitment = Shepherdh;
 				}else if( str_is(Rec_option, "Schaefer") ){ 
-					T recruitment(T SSB, NumericVector &parms){ return Schaefer(SSB, parms); }
+					recruitment = Schaefer;
 				}else if( str_is(Rec_option, "DerisoShnute") ){ 
-					T recruitment(T SSB, NumericVector &parms){ return DerisoShnute(SSB, parms); }
+					recruitment = DerisoShnute;
 				
-				}else if( str_is(Rec_option, "Custom") ){  
-				
-					T recruitment(T SSB, NumericVector &parms){ return CustomRecruitment(SSB, parms); } 
-					
+				}else if( str_is(Rec_option, "Custom") ){
+					recruitment = CustomRecruitment; 
 				}else{
 					std::printf("No valid recruitment option selected. Setting to default (constant) recruitment.");
 					rec_opt = "Const";
-					T recruitment(T SSB, NumericVector &parms){ return Constant(SSB, parms); }
+					recruitment = Constant;
 				}
 				
 			}
@@ -268,19 +315,14 @@ namespace PopSim{
 					}
 				}else{
 					if(kernel_call){ 
-						inp_parms = kernel( kernel_i, _ );	// kernel with p_err = F will always use first row in kernel
+						inp_parms = kernel( kernel_i, _ );	// kernel with p_err = F will always use same row of kernel
 					}else{
 						inp_parms = parms;
 					}
 				}
 				
 				//Recruitment Estimate
-				// if( is_in(rec_opt, SRRs_require_SPR0) ){ //check is rec_opt is in StringVector of SRR names
-					// rec = std::log( recruitment(S, inp_parms, spr0) ) // this spr0 is a nuisance
-					// //Find a better way to do this...
-				// }else{
 				rec = std::log( recruitment(S, inp_parms) );
-				// }
 				
 				//Recruitment Error
 				rec += R::rnorm(0., std_log_r) * rerror;

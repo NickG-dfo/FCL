@@ -3,6 +3,13 @@
 namespace PopSim{
 
 	template<class T>
+	struct Simulation{
+		
+	NumericMatrix MP_biomass, MP_ssb,
+				  MP_bindex, MP_nindex;
+				  
+	T MP_decision(Simulation<T>*, int);
+				  
 	List AgeModel(  List OM, 
 					List MP, 
 					int sim_no, 
@@ -11,9 +18,8 @@ namespace PopSim{
 
 		// Call OM and MP elements //
 		
-		int r_lag = OM["SR_lag"]; // Age of 'recruitment' (or minimum in age model, against which an SRR is modeled)
-			// y0 = MP["y0"], // Number of years with pre-defined TAC/F
-			// ymp = MP["delay"]; // this is delay on MP implementation -- either 0 or 1 year
+		int r_lag = OM["SR_lag"], // Age of 'recruitment' (or minimum in age model, against which an SRR is modeled)
+			MP_n = MP["n"];
 		
 		T terminalYield = OM["terminalYield"], // Yield from last year of assessment (or most recent Yield)
 		  R_std = OM["Rstd"], // Constant uncertainty in recruitment
@@ -275,28 +281,19 @@ namespace PopSim{
 					
 				}else{ //Years for Variable MPs	
 				
+					MP_biomass = Bage;
+					MP_ssb = SSBage;
+				
 					if(MP_Type){
 						
-						Fbar(y) = MP_decision<T>(SSB(y), (NumericVector){0.1});
+						Fbar(y) = MP_decision(this, MP_n);
 						TAC(y) = yield<T>( baranov_catch(Nage(y, _), Fbar(y), Mya_obj.Mya(y, _)), Catch_wt );
 						
 					}else if(!MP_Type){					
 					
-						TAC(y) = MP_decision<T>(SSB(y), (NumericVector){0.1});
+						Fbar(y) = MP_decision(this, MP_n);
 						
 					}
-
-					// MP_obj.F_MP( SSB(y - ymp), list_of_MPs.offset( MP_name ) );
-					// MP_obj.TAC_MP( SSB(y - ymp), list_of_MPs.offset( MP_name ) );
-					
-					// if( !MP_obj.F ){ // if F=0, therefore TAC MP
-						// MP_obj.F = solveF( MP_obj.TAC, Fya_obj.F_y(y), Nage(y, _), Mort_obj.M_y(y), Catch_wt );
-					// }else if( !MP_obj.TAC ){ // if TAC=0, therefore F MP
-						// MP_obj.TAC = yield<T>( baranov_catch( Nage(y, _), Fya_obj.F_y(y), Mort_obj.M_y(y) ), Catch_wt );
-					// }
-					
-					// TAC(y) = MP_obj.TAC + R::rnorm(0., TAC_error);
-					// Fbar(y) = MP_obj.F;
 					
 				}	
 				TAC(y) = TAC(y) < Cmin ? Cmin : TAC(y);
@@ -372,9 +369,12 @@ namespace PopSim{
 				Named("MP") = MP_name,
 		
 				Named("TAC") = all_TAC,
+				Named("TAC_disp") = TAC_disp,
 				Named("Fbar") = all_Fbar,
 				Named("Fbar_popwt") = all_Fbar_popwt,
+				Named("Mbar_popwt") = all_Mbar_popwt,
 				Named("Yield") = all_Yield,
+				Named("Ydiff") = all_Ydiff,
 				Named("Abundance") = all_Abundance,
 				Named("Biomass") = all_Biomass,
 				Named("SSB") = all_SSB,
@@ -388,6 +388,8 @@ namespace PopSim{
 		
 					
 	} // end function
+	
+	};
 	
 };
 
