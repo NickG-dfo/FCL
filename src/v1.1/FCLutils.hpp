@@ -1,5 +1,5 @@
 
-namespace mseutils{
+namespace FCLutils{
 
 	// Simple Functions //
 
@@ -374,16 +374,12 @@ namespace mseutils{
 			Catch = sum(Ca);
 			d_Catch = sum(d_Ca);
 			
-			// if(d_Catch == 0.){
-				// F = 0.001;
-			// }else{
-				F += (TAC - Catch) / d_Catch;
-			// }
+			F += (TAC - Catch) / d_Catch;
 			
 		}
 		
-		if(F > 1.){ F = 1.; }
-		if(F < 1E-6){ F = 1E-6; }
+		F = F > 1. ? 1. : F;
+		F = F < 1E-6 ? 1E-6 : F;
 		
 		return F;
 		
@@ -393,95 +389,134 @@ namespace mseutils{
 	// Armadillo Stuff //
 
 	//This class is to convert arma 3Dcube to output in Rcpp
-	class NumericMatrix3D{
+	class NumericMatrix3D
+	{
 		
-			const int x, y, z;
-			arma::cube Storage3D;
-			// Note: arma::cube is a form of the generic type arma::Cube<Type> where <Type> is <double>
+		const int x, y, z;
+		arma::cube Storage3D;
+		// Note: arma::cube is a form of the generic type arma::Cube<Type> where <Type> is <double>
+		
+	public:
 			
-		public:
-				
-			NumericMatrix3D(const int ix, const int iy, const int iz): x(ix), y(iy), z(iz) {
-				Storage3D.reshape(x, y, z);
-			}
+		NumericMatrix3D(const int ix, const int iy, const int iz): 
+			x(ix), y(iy), z(iz)
+		{
+			Storage3D.reshape(x, y, z);
+		}
+	
+	
+		IntegerVector dims(void){ return {x, y, z}; }
+		//2D
+		NumericMatrix slice_z(int depth){
+			NumericMatrix out = Rcpp::wrap( Storage3D.slice(depth) );
+			return out;			
+		}
+		NumericMatrix slice_y(int height){
+			NumericMatrix out = Rcpp::wrap( Storage3D.col(height) );
+			return out;			
+		}
+		NumericMatrix slice_x(int width){
+			NumericMatrix out = Rcpp::wrap( Storage3D.row(width) );
+			return out;			
+		}
+		//1D
+		NumericVector trim_xy(int width, int height){
+			return slice_x(width)(height, _);
+		}
+		NumericVector trim_yx(int height, int width){
+			return slice_x(width)(height, _);
+		}
+		NumericVector file_xz(int width, int depth){
+			return slice_x(width)(_, depth);
+		}
+		NumericVector file_zx(int depth, int width){
+			return slice_x(width)(_, depth);
+		}
+		NumericVector rank_yz(int height, int depth){
+			return slice_z(depth)(height, _);
+		}
+		NumericVector rank_zy(int depth, int height){
+			return slice_z(depth)(height, _);
+		}
+		//Unit
+		double& operator() (int width, int height, int depth){
+			double* ret = &Storage3D(width, height, depth);
+			return *ret;
+		}
 		
-		
-			IntegerVector dims(void){ return {x, y, z}; }
-			//2D
-			NumericMatrix slice_z(int depth){
-				NumericMatrix out = Rcpp::wrap( Storage3D.slice(depth) );
-				return out;			
-			}
-			NumericMatrix slice_y(int height){
-				NumericMatrix out = Rcpp::wrap( Storage3D.col(height) );
-				return out;			
-			}
-			NumericMatrix slice_x(int width){
-				NumericMatrix out = Rcpp::wrap( Storage3D.row(width) );
-				return out;			
-			}
-			//1D
-			NumericVector trim_xy(int width, int height){
-				return slice_x(width)(height, _);
-			}
-			NumericVector trim_yx(int height, int width){
-				return slice_x(width)(height, _);
-			}
-			NumericVector file_xz(int width, int depth){
-				return slice_x(width)(_, depth);
-			}
-			NumericVector file_zx(int depth, int width){
-				return slice_x(width)(_, depth);
-			}
-			NumericVector rank_yz(int height, int depth){
-				return slice_z(depth)(height, _);
-			}
-			NumericVector rank_zy(int depth, int height){
-				return slice_z(depth)(height, _);
-			}
-			//Unit
-			double& operator() (int width, int height, int depth){
-				double *ret = &( Storage3D(width, height, depth) );
-				return *ret;
-			}
-			
-			NumericMatrix3D& operator= (NumericMatrix3D M){
-				IntegerVector Dims = M.dims();
-				for(int i = 0; i < Dims(0); i++){
-					for(int j = 0; j < Dims(1); j++){
-						for(int k = 0; k < Dims(2); k++){
-							(*this)(i, j, k) = M(i, j, k);
-						}
+		NumericMatrix3D& operator= (NumericMatrix3D M){
+			IntegerVector Dims = M.dims();
+			for(int i = 0; i < Dims(0); i++){
+				for(int j = 0; j < Dims(1); j++){
+					for(int k = 0; k < Dims(2); k++){
+						this -> (i, j, k) = M(i, j, k);
 					}
 				}
-				return *this;
 			}
+			return *this;
+		}
 			
 	};
 	
-	// class NumericArray{
+	//This class is to convert arma 3Dcube to output in Rcpp
+	// class NumericMatrix4D
+	// {
 		
-			// std::vector<NumericMatrix*> storage;
+			// const int x, y, z, w;
+			// std::vector< std::vector< NumericMatrix* >* >* Storage4D;
+			// // Note: arma::cube is a form of the generic type arma::Cube<Type> where <Type> is <double>
 		
-		// public:
-		
-			// NumericArray(int slices, int rows, int cols){
-				// for(int i = 0; i < slices; i++){
-					// storage(i) = &NumericMatrix(rows, cols);
-				// }
+	// public:
+			
+		// NumericMatrix4D(const int ix, const int iy, const int iz): 
+			// x(ix), y(iy), z(iz), w(iw)
+		// {
+			// for(int i = 0; i < w; i++){
+				// for(int j = 0; j < z; j++){
+					// Storage4D->(i)->(j) = new NumericMatrix(x, y);
+				// }	
 			// }
-		
-			// NumericMatrix operator() (int slice){
-				// return *storage(slice);
-			// }
-			// NumericVector operator() (int slice, int row){
-				// return (*storage(slice))(row, _);
-			// }
-			// double operator() (int slice, int row, int col){
-				// return (*storage(slice))(row, col);
-			// }
-			// }
-		
+		// }
+	
+	
+		// IntegerVector dims(void){ return {x, y, z}; }
+		// //2D
+		// NumericMatrix slice_z(int depth){
+			// NumericMatrix out = Rcpp::wrap( Storage3D.slice(depth) );
+			// return out;			
+		// }
+		// NumericMatrix slice_y(int height){
+			// NumericMatrix out = Rcpp::wrap( Storage3D.col(height) );
+			// return out;			
+		// }
+		// NumericMatrix slice_x(int width){
+			// NumericMatrix out = Rcpp::wrap( Storage3D.row(width) );
+			// return out;			
+		// }
+		// //1D
+		// NumericVector trim_xy(int width, int height){
+			// return slice_x(width)(height, _);
+		// }
+		// NumericVector trim_yx(int height, int width){
+			// return slice_x(width)(height, _);
+		// }
+		// NumericVector file_xz(int width, int depth){
+			// return slice_x(width)(_, depth);
+		// }
+		// NumericVector file_zx(int depth, int width){
+			// return slice_x(width)(_, depth);
+		// }
+		// NumericVector rank_yz(int height, int depth){
+			// return slice_z(depth)(height, _);
+		// }
+		// NumericVector rank_zy(int depth, int height){
+			// return slice_z(depth)(height, _);
+		// }
+		// //Unit
+		// double& operator() (int width, int height, int depth, int breath){
+			// return this->Storage4D->(breath)->(depth)->(width, height);
+		// }	
+			
 	// };
 
 	//This function converts arma rmvnorm to a Rcpp equivalent
@@ -495,7 +530,8 @@ namespace mseutils{
 		NumericMatrix X = Rcpp::wrap(rmvnorm(1,
 											 Rcpp::as<arma::vec>(mu), 
 											 Rcpp::as<arma::mat>(S)
-								 ));
+											 )
+									);
 		// NumericMatrix X = Rcpp::wrap(x);
 		NumericVector out = X(0, _);
 		return out;
@@ -505,8 +541,8 @@ namespace mseutils{
 
 	// Auto-correlation class/functions //
 
-	template<class T>
-	T randWalk (T X, T &Std){ // Random Walk - takes two doubles
+	double randWalk (double X, double &Std)
+	{ // Random Walk - takes two doubles
 		return X + R::rnorm(0., Std); // X = X_n-1, returns X_n
 	}
 

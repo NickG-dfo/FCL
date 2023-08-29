@@ -1,40 +1,7 @@
-#include <math.h> //this is for std::pow, std::exp, and std::log
-#include <stdio.h> //this is for std::printf
-#include <string> //these are for std::string in 'str_is'
-#include <cstring>
+#include <SimSource.hpp>
 
-// #include <Rcpp.h> //not needed if including Armadillo
-#include <RcppArmadillo.h> //this is for use of Rcpp with mvnorm
-#include <mvnorm.h> // this is a sub-header within Arma
-// [[Rcpp::depends(RcppArmadillo, RcppDist)]]
-//This ^ is required for Arma, and is essential for rmvnorm
-
-using Rcpp::_;
-using Rcpp::max;
-using Rcpp::sum;
-
-using Rcpp::Named;
-using Rcpp::String;
-using Rcpp::NumericVector;
-using Rcpp::IntegerVector;
-using Rcpp::StringVector;
-using Rcpp::LogicalVector;
-using Rcpp::NumericMatrix;
-using Rcpp::List;
-using Rcpp::DataFrame;
-
-
-#include <mseliteutils.cpp> //simple functions for conversions and containers
-using namespace mseutils;
-
-#include <Mortality.cpp> //class object for natural mortality
-#include <Ncalc.cpp> //objects and functions for abundances, indices, lengths, and data simulation
-#include <Recruitment.cpp> //objects and functions for recruitment
-#include <HCR.cpp> //objects and classes for MPs
-#include <Fishing.cpp> //object for fishing mortality
-
-#include <simulation.cpp>
-
+//Save MP_blank.cpp as a separate file, the source this file through R//
+//This will create a function called 'Simulate' in R//
 
 namespace PopSim{
 
@@ -58,7 +25,7 @@ namespace PopSim{
 		T output = 0.;
 					
 		if(n == 0){
-			output = sum(SSB(SSB.rows(), _)) * 0.1;
+			output = sum( SSB(SSB.nrow()-1, _) ) * 0.1;
 		}
 		
 		return output; 
@@ -75,33 +42,3 @@ namespace PopSim{
 
 }
 
-
-// R Simulation Function //
-
-// [[Rcpp::export]]
-List Simulate(  List OM, 
-				List MP, 
-				int sim_no, 
-				int y_sim,
-				String SimType = "Age-based") {
-					
-	//Surplus Production Model
-	if(	str_is( SimType, "SPM" ) ){	
-	
-		return SPMSim::SurplusModel<double> ( OM, 
-											  MP, 
-											  sim_no, 
-											  y_sim );
-								
-	}else if( str_is( SimType, "Age-based" ) ){
-		
-		return PopSim::Simulation<double>().AgeModel(OM,
-												   MP, 
-												   sim_no,
-												   y_sim);
-		
-	}				
-
-	return List::create(R_NilValue);
-							
-}

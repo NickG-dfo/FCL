@@ -7,8 +7,12 @@ namespace PopSim{
 		NumericMatrix _M;
 		
 		F_type(Rcpp::RObject O){
-			if(Rf_isVector(O)){ _V = Rcpp::as<NumericVector>(O); }
-			if(Rf_isMatrix(O)){ _M = Rcpp::as<NumericMatrix>(O); }
+			if(Rf_isVector(O))
+			{ _V = Rcpp::as<NumericVector>(O); }
+			else if(Rf_isMatrix(O))
+			{ _M = Rcpp::as<NumericMatrix>(O); }
+			else
+			{ std::printf("RObject not compatible with 'F_Type'."); }
 		}
 			
 		F_type& operator= (NumericVector& vec){

@@ -12,6 +12,7 @@ namespace PopSim{
 						  Stock_wt,
 						  Catch_wt;
 			SR<T> Rec;
+			T Feps, Seps;
 		
 		public:	
 			
@@ -22,13 +23,16 @@ namespace PopSim{
 				Mat = LHC["Mat"];
 				Stock_wt = LHC["Sw"];
 				Catch_wt = LHC["Cw"];
+				
+				Feps = 1E-6;
+				Seps = 1E-3;
 			}
 						
 			SPR(T F){
 				NumericVector M = cat(0., Mage), 
 							  S = cat(0., Sage),
 							  cZ = cumsum(M - S * F);
-				T spr = sum( (1. - Rcpp::exp(-cZ)) * Mat * Stock_wt );
+				T spr = sum( (Rcpp::exp(-cZ)) * Mat * Stock_wt );
 				return spr;
 			}
 			
@@ -51,8 +55,8 @@ namespace PopSim{
 				  Si = 1.;
 				T y, dy;
 				do{
-					y = ((*Rec->recruitment)(Si, 0, 0)*SPR(F) - Si);
-					dy = ((*Rec->recruitment)(Si+.01, 0, 0)*SPR(F) - (*Rec->recruitment)(Si-.01, 0, 0)*SPR(F))/.02 - 1.;
+					y = ((*Rec->recruitment)(Si, Rec.parms) * SPR(F) - Si);
+					dy = ((*Rec->recruitment)(Si+Seps, Rec.parms)*SPR(F) - (*Rec->recruitment)(Si-Seps, Rec.parms) * SPR(F))/(2*Seps) - 1.;
 					delta = dy/y;
 					Si -= delta;
 				} while(delta > .001);
@@ -68,9 +72,24 @@ namespace PopSim{
 				  Fi = 1.;
 				T y, dy;
 				do{
-					y = (percent*SPR(0.) - SPR(Fi));
-					dy = (SPR(Fi+.0001) - SPR(Fi-.0001))/.0002;
-					delta = -dy/y;
+					y = SPR(Fi) - percent*SPR(0.);
+					dy = (SPR(Fi+Feps) - SPR(Fi-Feps))/(2*Feps);
+					delta = dy/y;
+					Fi -= delta;
+				} while(delta > .001);
+				return Fi;
+			}
+			
+						
+			F_BMSYx(T percent)
+			{
+				T delta = 1.,
+				  Fi = 1.;
+				T y, dy;
+				do{
+					y = SSBeq(Fi) - percent*SSBeq(0);
+					dy = (SSBeq(Fi+Feps) - SSBeq(Fi-Feps))/(2*Feps);
+					delta = dy/y;
 					Fi -= delta;
 				} while(delta > .001);
 				return Fi;
@@ -81,8 +100,8 @@ namespace PopSim{
 				  Fi = 1.;
 				T y, dy;
 				do{
-					y = -std::pow(Yeq(Fi), 2.);
-					dy = (Yeq(Fi+.01) - Yeq(Fi-.01))/.02 - 1.;
+					y = std::pow(Yeq(Fi), 2.); //y and dy are already simplified for delta
+					dy = 2 * (Yeq(Fi+Feps) - Yeq(Fi-Feps))/(2*Feps);
 					delta = dy/y;
 					Fi -= delta;
 				} while(delta > .001);

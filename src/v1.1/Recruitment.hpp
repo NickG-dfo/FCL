@@ -164,9 +164,6 @@ namespace PopSim{
 		int yi, //year, max of Y
 			kernel_i; //kernel index being used
 		NumericMatrix cov, kernel; //cov and kernel matrices (const)
-		NumericVector parms; //vector of parms values for SRR
-		
-		T (*recruitment)(T, NumericVector&); //function
 		
 		//Constructor args//
 		String rec_opt;
@@ -214,6 +211,9 @@ namespace PopSim{
 		}
 
 		public:
+		
+			NumericVector parms; //vector of parms values for SRR
+			T (*recruitment)(T, NumericVector&); //function
 			
 			SR(String Rec_option, 
 			   List &LHC, // Just for SPR0
@@ -236,7 +236,7 @@ namespace PopSim{
 				logRy = rep(0., Y);
 
 					  if( str_is(Rec_option, "Const") ){ 
-					  recruitment = &Constant;
+					  recruitment = Constant;
 				}else if( str_is(Rec_option, "BH1") ){ 
 					recruitment = BevertonHolt1;
 				}else if( str_is(Rec_option, "BH2") ){ 
@@ -301,7 +301,8 @@ namespace PopSim{
 				kernel_call = 1;
 			}
 			
-			T logRec(T S){
+			T logRec(T S)
+			{
 				
 				T rec;
 				

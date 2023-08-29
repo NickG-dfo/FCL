@@ -98,10 +98,8 @@ Create_OM <- function(){
     'delay' = NULL, #int
     'Cmin' = NULL, #double
     'TAC_Error' = NULL, #double
-    'TAC0' = NULL #double
-    # 'Function' = NULL, #string -- name of function for MP in R
-    # 'MP_inputs' = NULL #this can be any type, but must be the only argument to Function
-                #e.g. list, vector, numeric, string, etc.
+    'TAC0' = NULL, #double
+    'n' = 0
     
   )
   

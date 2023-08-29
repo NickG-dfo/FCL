@@ -8,6 +8,9 @@ namespace PopSim{
 	NumericMatrix MP_biomass, MP_ssb,
 				  MP_bindex, MP_nindex;
 				  
+	//Note: OM should include initial matrices required as input by MP decision
+	// 		e.g. if MP requires indices 5 years back, include a 5xA matrix for first 5 years
+				  
 	T MP_decision(Simulation<T>*, int);
 				  
 	List AgeModel(  List OM, 
@@ -47,6 +50,8 @@ namespace PopSim{
 					  // M_est = OM["Mpar_est"], // change these
 					  // M_std = OM["Mpar_sd"], // 		these
 					  
+					  tf = OM["survey_tf"],
+					  
 					  PE_Std = OM["PE_Std"], // Constant uncertainty in process error for each age
 					  
 					  TAC0 = MP["TAC0"]; // Fixed TAC for start of simulation (this should be the same size as y0)
@@ -59,7 +64,10 @@ namespace PopSim{
 					  
 		NumericMatrix Rec_CoV = OM["RCoV"], // (Optional) Covariance matrix for SRR parameters
 					  Rec_Kernel = OM["RKernel"], // (Optional) Kernel matrix for SRR parameters
-					  N_rec = OM["Nrec"]; // This is a matrix of abundance for recruitment -- nrow() depending on SR lag-time
+					  N_rec = OM["Nrec"], // This is a matrix of abundance for recruitment -- nrow() depending on SR lag-time
+					  
+					  Survey_q = OM["SurveyQ"], //survey catchabilities for each survey/age (same across years?)
+					  Index_wt = OM["Index_wt"]; //weights for each survey/survey-timing
 					  
 		List Minfo = OM["Minfo"]; // This is just for input into the M object, not for local calls
 		
@@ -69,10 +77,7 @@ namespace PopSim{
 		//if F_type works properly, this should allow F_sigma to be either a matrix OR vector
 		Rcpp::RObject F_temp = OM["F_sigma"];
 		F_type F_std(F_temp); //Uncertainty matrix/vector for error in F
-		
-		// String Custom_SR = OM["SR_function"];
-		// List R_info = List::create(Named("Name") = R_name, Named("Function") = Custom_SR);
-		
+				
 		bool MP_Type = MP["F_MP"];
 		// Rcpp::RObject MP_inputs = MP["MP_inputs"];
 		// String MP_Function = MP["Function"];
@@ -286,24 +291,19 @@ namespace PopSim{
 				
 					if(MP_Type){
 						
-						Fbar(y) = MP_decision(this, MP_n);
+						Fbar(y) = this->MP_decision(this, MP_n);
 						TAC(y) = yield<T>( baranov_catch(Nage(y, _), Fbar(y), Mya_obj.Mya(y, _)), Catch_wt );
 						
 					}else if(!MP_Type){					
 					
-						Fbar(y) = MP_decision(this, MP_n);
+						Fbar(y) = this->MP_decision(this, MP_n);
 						
 					}
 					
-				}	
+				}
 				TAC(y) = TAC(y) < Cmin ? Cmin : TAC(y);
 				TAC(y) *= std::exp( R::rnorm(0., TAC_Error) );
-				Fbar(y) = solveF( TAC(y), .1, Nage(y, _), Mya_obj.Mya(y, _), Catch_wt );
-				// If TAC is too low, set minimum to Cmin
-				// if( !str_is(mp, "No fishing") | (TAC(y) < Cmin) ) {
-					// TAC(y) = Cmin;
-					// Fbar(y) = solveF( TAC(y), Fya_obj.Fya(y, _), Nage(y, _), Mya_obj.Mya(y, _), Catch_wt );
-				// }			
+				Fbar(y) = solveF( TAC(y), .1, Nage(y, _), Mya_obj.Mya(y, _), Catch_wt );				
 							
 				// Fishing Mortality
 				Fya_obj(Fbar(y));
@@ -312,9 +312,8 @@ namespace PopSim{
 				Bage(y, _) = Nage(y, _) * Stock_wt;
 				SSBage(y, _) = Bage(y, _) * Maturity;
 				
-				// Fage(y, _) = Fbar(y) * Fya_obj.Sel;
 				Zage(y, _) = Fya_obj.Fya(y, _) + Mya_obj.Mya(y, _);
-				Cage(y, _) = baranov_catch(Nage(y, _), Fya_obj.Fya(y, _), Mya_obj.Mya(y, _)); // Nage(y, _) * (1. - std::exp(-Zage(y, _))) * Fage(y, _) / Zage(y, a);
+				Cage(y, _) = baranov_catch(Nage(y, _), Fya_obj.Fya(y, _), Mya_obj.Mya(y, _));
 				Yage(y, _) = Cage(y, _) * Catch_wt; // Cage(y, a) * Catch_wt(a);
 							
 				Fbar_top = 0.;
@@ -336,16 +335,29 @@ namespace PopSim{
 				}
 				
 				Fbar_popwt(y) = Fbar_top / Fbar_bot;
-				Mbar_popwt(y) = Mbar_top / Mbar_bot;					
+				Mbar_popwt(y) = Mbar_top / Mbar_bot;		
+							
+				//Indices by age
+				NumericMatrix NIage = Indices_YA(Nage(y, _), Survey_q, Zage(y, _), tf);
+				NumericMatrix BIage = NIndices * Index_wt;						
+				//Total Indices 
+				NumericVector NIndices = sum(NIage(
+				NumericVector BIndices = NIndices * Index_wt;				
 						
 				Abundance(y) = sum(Nage(y, _));
 				Ydiff(y) = sum(Yage(y, _) - Yage(y-1, _));
 				Yield(y) = sum(Yage(y, _));
 				TAC_disp(y) = TAC(y) - Yield(y);
 				Biomass(y) = sum(Bage(y, _));
-				SSB(y) = sum(SSBage(y, _));
+				SSB(y) = sum(SSBage(y, _));				
 				
-			} // end projection
+				//Assign local class members for MP inputs
+				MP_ssb = SSBage( Range(0, y), _ );
+				MP_biomass = Bage( Range(0, y), _ );
+				MP_ssb = SSB( Range(0, y), _ );
+				MP_ssb = SSB( Range(0, y), _ );
+				
+			} // end projection			
 			
 			//Annual values
 			all_TAC(sim, _) = clone(TAC);
@@ -358,9 +370,18 @@ namespace PopSim{
 			all_Abundance(sim, _) = clone(Abundance);
 			all_Biomass(sim, _) = clone(Biomass);
 			all_SSB(sim, _) = clone(SSB);
-			all_Rec(sim, _) = clone( Rcpp::exp(Rec_obj.getRec()) );
+			all_Rec(sim, _) = clone( Rcpp::exp(Rec_obj.getRec()) );			
 			
 		} // end simulation
+		
+		YaA_list = List::create();
+		BaA_list = List::create();
+		SaA_list = List::create();
+		for(a = 0; a < A; ++a){
+			YaA_list.push_back( Named(String(a) ) = (NumericMatrix)YaA.slice_x(a) );
+			BaA_list.push_back( Named(String(a) ) = (NumericMatrix)BaA.slice_x(a) );
+			SaA_list.push_back( Named(String(a) ) = (NumericMatrix)SaA.slice_x(a) );
+		}
 		
 		return  List::create(
 				Named("OM") = OM_name,
@@ -368,11 +389,11 @@ namespace PopSim{
 				Named("Rec") = R_name,
 				Named("MP") = MP_name,
 		
-				Named("TAC") = all_TAC,
-				Named("TAC_disp") = TAC_disp,
 				Named("Fbar") = all_Fbar,
 				Named("Fbar_popwt") = all_Fbar_popwt,
 				Named("Mbar_popwt") = all_Mbar_popwt,
+				Named("TAC") = all_TAC,
+				Named("TAC_disp") = TAC_disp,
 				Named("Yield") = all_Yield,
 				Named("Ydiff") = all_Ydiff,
 				Named("Abundance") = all_Abundance,
@@ -380,10 +401,13 @@ namespace PopSim{
 				Named("SSB") = all_SSB,
 				Named("Rec") = all_Rec,
 				
+				Named("Nindex") = NIndices,
+				Named("Bindex") = BIndices,
+				
 				//These will need fixing to allow output in R
-				Named("YaA") = YaA,
-				Named("BaA") = BaA,
-				Named("SaA") = SaA
+				Named("YaA") = YaA_list,
+				Named("BaA") = BaA_list,
+				Named("SaA") = SaA_list
 				);
 		
 					
