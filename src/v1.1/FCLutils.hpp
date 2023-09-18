@@ -7,274 +7,227 @@ namespace FCLutils{
 		
 		std::string string1 = String1.get_cstring();
 		std::string string2 = String2.get_cstring();
-		//first check if strings of of same length
-		// bool out = (string1.size() == string2.size());
-		// if( !out ){ return false; }
-		// //then check each element to see if they match
-		// for(unsigned int i = 0; i < string1.size(); i++){
-			// out &= string1[i] == string2[i];
-		// }
-		// return out;
 		return (bool)string1.compare(string2);
 		
 	}
 
 	//These are meant ot be generic "%in%" functions
-	bool is_in(String x, StringVector X){
+	// bool is_in(String x, StringVector X){
 		
-		for(int i = 0; i < X.size(); i++){
-			if( x == X(i) ) { return 1; }
-		}
-		return 0;
+		// for(int i = 0; i < X.size(); i++){
+			// if( x == X(i) ) { return 1; }
+		// }
+		// return 0;
 			
-	}
-	bool is_in(double x, NumericVector X){
+	// }
+	// bool is_in(double x, NumericVector X){
 		
-		for(int i = 0; i < X.size(); i++){
-			if( x == X(i) ) { return 1; }
-		}
-		return 0;
+		// for(int i = 0; i < X.size(); i++){
+			// if( x == X(i) ) { return 1; }
+		// }
+		// return 0;
 			
-	}
-	bool is_in(int x, IntegerVector X){
+	// }
+	// bool is_in(int x, IntegerVector X){
 		
-		for(int i = 0; i < X.size(); i++){
-			if( x == X(i) ) { return 1; }
-		}
-		return 0;
+		// for(int i = 0; i < X.size(); i++){
+			// if( x == X(i) ) { return 1; }
+		// }
+		// return 0;
 			
-	}
+	// }
 
-	IntegerVector seq(int a, int b, int d = 1){
+	// IntegerVector seq(int a, int b, int d = 1){
 
-		int range = (b - a)/d;
-		IntegerVector vec(range+1);
-		for(int i = 0; i <= range; i++){
-			vec(i) = a + i*d;
-		}
-		
-		return vec;
-		
-	}
-
-	template<class T>
-	NumericVector seq(T a, T b, T d = 1.){
-
-		int range = (int)(b - a)/d;
-		NumericVector vec(range);
-		for(int i = 0; i < range; i++){
-			vec(i) = a + i*d;
-		}
-		
-		return vec;
-		
-	}
-
-	template<class T>
-	NumericVector cat(const T x, NumericVector vec){
-		
-		vec.push_front(x);
-		return vec;
-		
-	}
-
-	IntegerVector cat(const int x, const IntegerVector vec){
-		
-		IntegerVector nvec(vec.size()+1);
-		for(int i = 1; i < vec.size()+1; i++){
-			nvec(i) = vec(i-1);
-		}
-		// vec.push_front(x);	
-		nvec(0) = x;
-		return nvec;
-		
-	}
-
-	StringVector cat(const String x, const StringVector vec){
-		
-		StringVector nvec(vec.size()+1);
-		for(int i = 1; i < vec.size()+1; i++){
-			nvec(i) = vec(i-1);
-		}
-		// vec.push_front(x);	
-		nvec(0) = x;
-		return nvec;
-		
-	}
-
-	template<class T>
-	NumericVector cat(NumericVector vec, const T x){
-		
-		vec.push_back(x);	
-		return vec;
-		
-	}
-
-	IntegerVector cat(const IntegerVector vec, const int x){
-		
-		int len = vec.size();
-		IntegerVector nvec(len+1);
-		for(int i = 0; i < len; i++){
-			nvec(i) = vec(i);
-		}
-		// vec.push_front(x);	
-		nvec(len) = x;
-		return nvec;
-		
-	}
-
-	StringVector cat(const StringVector vec, const String x){
-		
-		int len = vec.size();
-		StringVector nvec(len+1);
-		for(int i = 0; i < len; i++){
-			nvec(i) = vec(i);
-		}
-		// vec.push_front(x);	
-		nvec(len) = x;
-		return nvec;
-		
-	}
-
-	NumericVector cat(const NumericVector &vec1, const NumericVector &vec2){
-		
-		int len1 = vec1.size(), len2 = vec2.size();
-		NumericVector vecn(len1 + len2);
-		
-		for(int i = 0; i < len1+len2; i++){
-			if(i < len1){
-				vecn(i) = vec1(i);
-			}else{
-				vecn(i) = vec2(i-len1);
-			}		
-		}
-		
-		return vecn;
-		
-	}
-
-	IntegerVector cat(const IntegerVector &vec1, const IntegerVector &vec2){
-		
-		int len1 = vec1.size(), len2 = vec2.size();
-		IntegerVector vecn(len1 + len2);
-		
-		for(int i = 0; i < len1+len2; i++){
-			if(i < len1){
-				vecn(i) = vec1(i);
-			}else{
-				vecn(i) = vec2(i-len1);
-			}		
-		}
-		
-		return vecn;
-		
-	}
-
-	StringVector cat(const StringVector &vec1, const StringVector &vec2){
-		
-		int len1 = vec1.size(), len2 = vec2.size();
-		StringVector vecn(len1 + len2);
-		
-		for(int i = 0; i < len1+len2; i++){
-			if(i < len1){
-				vecn(i) = vec1(i);
-			}else{
-				vecn(i) = vec2(i-len1);
-			}		
-		}
-		
-		return vecn;
-		
-	}
-
-	template<class T>
-	NumericVector rep(const T x, const int n){
-		
-		NumericVector vec(n);
-		for(int i = 0; i < n; i++){
-			vec(i) = x;
-		}
-		
-		return vec;
-		
-	}
-
-	IntegerVector rep(const int x, const int n){
-		
-		IntegerVector vec(n);
-		for(int i = 0; i < n; i++){
-			vec(i) = x;
-		}
-		
-		return vec;
-		
-	}
-
-	StringVector rep(const String x, const int n){
-		
-		StringVector vec(n);
-		for(int i = 0; i < n; i++){
-			vec(i) = x;
-		}
-		
-		return vec;
-		
-	}
-
-	// NumericVector rep(const NumericVector x, int n, bool at = false){
-		
-		// NumericVector vec(0);
-		// if(!at){
-			// for(int i = 0; i < x.size(); i++){ //this is like each = n, repeating each val at a time
-				// vec = cat(vec, rep(x(i), n));
-			// }	
-		// }else if(at){
-			// for(int i = 0; i < x.size(); i++){ // this is repeating all values in order they're given
-				// vec = cat(vec, x);
-			// }
+		// int range = (b - a)/d;
+		// IntegerVector vec(range+1);
+		// for(int i = 0; i <= range; i++){
+			// vec(i) = a + i*d;
 		// }
 		
 		// return vec;
 		
 	// }
 
-	// IntegerVector rep(const IntegerVector x, int n, bool at = false){
-		
-		// IntegerVector vec(0);
-		// if(!at){
-			// for(int i = 0; i < x.size(); i++){ //this is like each = n, repeating each val at a time
-				// vec = cat(vec, rep((int)x(i), n));
-				// //this is a nested loop -> O(n^2) time; optimize??
-			// }	
-		// }else if(at){
-			// for(int i = 0; i < x.size(); i++){ // this is repeating all values in order they're given
-				// vec = cat(vec, x);
-				// //this is a nested loop -> O(n^2) time; optimize??
-			// }
+	// template<class T>
+	// NumericVector seq(T a, T b, T d = 1.){
+
+		// int range = (int)(b - a)/d;
+		// NumericVector vec(range);
+		// for(int i = 0; i < range; i++){
+			// vec(i) = a + i*d;
 		// }
 		
 		// return vec;
 		
 	// }
 
-	// StringVector rep(const StringVector x, int n, bool at = false){
+	// template<class T>
+	// NumericVector cat(T x, NumericVector &vec){
 		
-		// StringVector vec(0);
-		// if(!at){
-			// for(int i = 0; i < x.size(); i++){ //this is like each = n, repeating each val at a time
-				// vec = cat(vec, rep((String)x(i), n));
-				// //this is a nested loop -> O(n^2) time; optimize??
-			// }
-		// }else if(at){
-			// for(int i = 0; i < n; i++){
-				// vec = cat(vec, x); // this is repeating all values in order they're given
-			// }
-		// }
-		
+		// vec.push_front(x);
 		// return vec;
 		
 	// }
 
+	// IntegerVector cat(int x, IntegerVector &vec){
+		
+		// // IntegerVector nvec(vec.size()+1);
+		// // for(int i = 1; i < vec.size()+1; i++){
+			// // nvec(i) = vec(i-1);
+		// // }
+		// vec.push_front(x);	
+		// // nvec(0) = x;
+		// return nvec;
+		
+	// }
+
+	// StringVector cat(String x, StringVector &vec){
+		
+		// // StringVector nvec(vec.size()+1);
+		// // for(int i = 1; i < vec.size()+1; --i){
+			// // vec(i) = vec(i-1);
+		// // }
+		// vec.push_front(x);	
+		// // nvec(0) = x;
+		// return vec;
+		
+	// }
+
+	// template<class T>
+	// NumericVector cat(NumericVector &vec, T x){
+		
+		// vec.push_back(x);	
+		// return vec;
+		
+	// }
+
+	// IntegerVector cat(IntegerVector &vec, int x){
+		
+		// // int len = vec.size();
+		// // IntegerVector nvec(len+1);
+		// // for(int i = 0; i < len; i++){
+			// // nvec(i) = vec(i);
+		// // }
+		// vec.push_back(x);	
+		// // nvec(len) = x;
+		// return nvec;
+		
+	// }
+
+	// StringVector cat(StringVector &vec, String x){
+		
+		// // int len = vec.size();
+		// // StringVector nvec(len+1);
+		// // for(int i = 0; i < len; i++){
+			// // nvec(i) = vec(i);
+		// // }
+		// vec.push_front(x);	
+		// // nvec(len) = x;
+		// return nvec;
+		
+	// }
+
+	// NumericVector cat(const NumericVector &vec1, const NumericVector &vec2){
+		
+		// int len1 = vec1.size(), len2 = vec2.size();
+		// NumericVector vecn(len1 + len2);
+		
+		// for(int i = 0; i < len1+len2; i++){
+			// if(i < len1){
+				// vecn(i) = vec1(i);
+			// }else{
+				// vecn(i) = vec2(i-len1);
+			// }		
+		// }
+		
+		// return vecn;
+		
+	// }
+
+	// IntegerVector cat(const IntegerVector &vec1, const IntegerVector &vec2){
+		
+		// int len1 = vec1.size(), len2 = vec2.size();
+		// IntegerVector vecn(len1 + len2);
+		
+		// for(int i = 0; i < len1+len2; i++){
+			// if(i < len1){
+				// vecn(i) = vec1(i);
+			// }else{
+				// vecn(i) = vec2(i-len1);
+			// }		
+		// }
+		
+		// return vecn;
+		
+	// }
+
+	// StringVector cat(const StringVector &vec1, const StringVector &vec2){
+		
+		// int len1 = vec1.size(), len2 = vec2.size();
+		// StringVector vecn(len1 + len2);
+		
+		// for(int i = 0; i < len1+len2; i++){
+			// if(i < len1){
+				// vecn(i) = vec1(i);
+			// }else{
+				// vecn(i) = vec2(i-len1);
+			// }		
+		// }
+		
+		// return vecn;
+		
+	// }
+
+	// template<class T>
+	// NumericVector rep(const T x, const int n){
+		
+		// NumericVector vec(n);
+		// for(int i = 0; i < n; i++){
+			// vec(i) = x;
+		// }
+		
+		// return vec;		
+	// }
+
+	// IntegerVector rep(const int x, const int n){
+		
+		// IntegerVector vec(n);
+		// for(int i = 0; i < n; i++){
+			// vec(i) = x;
+		// }
+		
+		// return vec;		
+	// }
+
+	// StringVector rep(const String x, const int n){
+		
+		// StringVector vec(n);
+		// for(int i = 0; i < n; i++){
+			// vec(i) = x;
+		// }
+		
+		// return vec;		
+	// }
+	
+	NumericVector rowSum(NumericMatrix& M){
+		int R = M.nrow();
+		NumericVector V(R);
+		for(int i = 0; i < R; ++i){
+			V(i) = sum(M(i, _));
+		}
+		return V;
+	}
+	
+	NumericVector colSum(NumericMatrix& M){
+		int C = M.ncol();
+		NumericVector V(C);
+		for(int i = 0; i < C; ++i){
+			V(i) = sum(M(_, i));
+		}
+		return V;
+	}
+	
 	NumericVector as_vector(const NumericMatrix &M){
 		
 		int J = M.cols(), I = M.rows();
@@ -285,8 +238,7 @@ namespace FCLutils{
 			}
 		}
 		
-		return V;
-		
+		return V;		
 	}
 
 	NumericMatrix sub(NumericMatrix Mat, IntegerVector rows, IntegerVector cols){
@@ -322,7 +274,7 @@ namespace FCLutils{
 	// -------------------------------------------------------------------------------------------------//
 
 
-	// MSE-Lite Functions //
+	// Projection Functions //
 
 	NumericVector baranov_catch(const NumericVector &Na, const NumericVector &Fa, const NumericVector &Ma){
 		
@@ -341,14 +293,9 @@ namespace FCLutils{
 	}
 
 	template<class T>
-	T yield(NumericVector catches, NumericVector& Cw){
-		
-		for(int i = 0; i < catches.size(); i++){
-			catches(i) *= Cw(i);
-		}
-		
-		return sum(catches);
-		
+	inline T yield(NumericVector catches, NumericVector& Cw)
+	{		
+		return sum(catches*Cw);
 	}
 
 	template<class T>
@@ -449,7 +396,7 @@ namespace FCLutils{
 			for(int i = 0; i < Dims(0); i++){
 				for(int j = 0; j < Dims(1); j++){
 					for(int k = 0; k < Dims(2); k++){
-						this -> (i, j, k) = M(i, j, k);
+						(*this)(i, j, k) = M(i, j, k);
 					}
 				}
 			}
@@ -519,7 +466,7 @@ namespace FCLutils{
 			
 	// };
 
-	//This function converts arma rmvnorm to a Rcpp equivalent
+	//This function converts arma rmvnorm to its Rcpp equivalent
 	NumericVector mvrnorm(const NumericVector &mu, const NumericMatrix &S){
 
 		// const unsigned int n = 1;
@@ -540,6 +487,12 @@ namespace FCLutils{
 
 
 	// Auto-correlation class/functions //
+
+	//Create error class that other classes inherit
+	//until then...
+	double randWalk(double, double);
+	NumericVector randWalk(NumericVector, NumericVector);
+	struct AR1d;
 
 	double randWalk (double X, double &Std)
 	{ // Random Walk - takes two doubles

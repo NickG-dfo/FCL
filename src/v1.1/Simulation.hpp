@@ -66,7 +66,7 @@ namespace PopSim{
 					  Rec_Kernel = OM["RKernel"], // (Optional) Kernel matrix for SRR parameters
 					  N_rec = OM["Nrec"], // This is a matrix of abundance for recruitment -- nrow() depending on SR lag-time
 					  
-					  Survey_q = OM["SurveyQ"], //survey catchabilities for each survey/age (same across years?)
+					  Survey_q = OM["SurveyQ"], //survey catchabilities for each survey+age (same across years?)
 					  Index_wt = OM["Index_wt"]; //weights for each survey/survey-timing
 					  
 		List Minfo = OM["Minfo"]; // This is just for input into the M object, not for local calls
@@ -101,7 +101,8 @@ namespace PopSim{
 			 M_AR_on = M_settings["AR"];
 		
 		int A = OM["A"]; // A isn't needed but makes some implementation easier (length of Age vector, not max age)
-		int y, a, sim; //for loop values
+		int y, a, sim, 
+			qS = Survey_q.ncol(); //for loop values
 		int y0 = TAC0.size();
 		
 		IntegerVector years = OM["years"]; //all years in assessment (may remove and just read last year)
@@ -127,11 +128,12 @@ namespace PopSim{
 					  Abundance(y_sim), Biomass(y_sim), SSB(y_sim);
 					  
 		//matrices for years and ages
-		NumericMatrix //logNage(y_sim, A), 
-					  Zage(y_sim, A),
+		NumericMatrix Zage(y_sim, A),
 					  Cage(y_sim, A), Yage(y_sim, A), 
 					  Bage(y_sim, A), SSBage(y_sim, A), 
-					  Nage(y_sim, A), PE(y_sim, A);
+					  Nage(y_sim, A), PE(y_sim, A),
+					  NIage(qS, A), BIage(qS, A),
+					  NIndices(y_sim, qS), BIndices(y_sim, qS);
 									
 		//matrices for years and sims
 		NumericMatrix all_TAC(sim_no, y_sim), all_TAC_disp(sim_no, y_sim),
@@ -139,11 +141,15 @@ namespace PopSim{
 					  all_Fbar_popwt(sim_no, y_sim), all_Mbar_popwt(sim_no, y_sim),
 					  all_Ydiff(sim_no, y_sim), all_Yield(sim_no, y_sim),
 					  all_Biomass(sim_no, y_sim), all_SSB(sim_no, y_sim),
-					  all_Rec(sim_no, y_sim), all_Abundance(sim_no, y_sim);
+					  all_Rec(sim_no, y_sim), all_Abundance(sim_no, y_sim),
+					  all_NIndices(sim_no, y_sim), all_BIndices(sim_no, y_sim);
 		
-		NumericMatrix3D YaA(sim_no, y_sim, A),
-						BaA(sim_no, y_sim, A),
-						SaA(sim_no, y_sim, A);
+		//matrics that willbe converted into arrays
+		NumericMatrix YaArr(A,  y_sim*sim_no),
+					  BaArr(A,  y_sim*sim_no),
+					  SaArr(A,  y_sim*sim_no),
+					  NIsArr(qS,  y_sim*sim_no),
+					  BIsArr(qS,  y_sim*sim_no);		
 
 
 		// -- Create class objects -- //
@@ -225,11 +231,7 @@ namespace PopSim{
 				Fbar_bot += ( (a > Fbar_ind(0)) & (a < Fbar_ind(1)) ) * Nage(y, a);
 				Mbar_top += ( (a > Mbar_ind(0)) & (a < Mbar_ind(1)) ) * Nage(y, a) * Mya_obj.Mya(y, a);
 				Mbar_bot += ( (a > Mbar_ind(0)) & (a < Mbar_ind(1)) ) * Nage(y, a);
-				
-				//3D matrices with age components, e.g. for yield5-8
-				YaA(a, sim, y) = Yage(y, a);
-				BaA(a, sim, y) = SSBage(y, a);
-				SaA(a, sim, y) = Bage(y, a);
+			
 			}
 					
 			Fbar_popwt(y) = Fbar_top / Fbar_bot;
@@ -321,28 +323,26 @@ namespace PopSim{
 				Mbar_top = 0.;
 				Mbar_bot = 0.;
 				
-				for(a = 0; a < A; a++){
+				for(a = 0; a < A; a++)
+				{
 					//pop-wt Fbar & Mbar
 					Fbar_top += ( (a > Fbar_ind(0)) & (a < Fbar_ind(1)) ) * Nage(y, a) * Fya_obj.Fya(y, a);
 					Fbar_bot += ( (a > Fbar_ind(0)) & (a < Fbar_ind(1)) ) * Nage(y, a);
 					Mbar_top += ( (a > Mbar_ind(0)) & (a < Mbar_ind(1)) ) * Nage(y, a) * Mya_obj.Mya(y, a);
-					Mbar_bot += ( (a > Mbar_ind(0)) & (a < Mbar_ind(1)) ) * Nage(y, a);
-					
-					//3D matrices with age components, e.g. for yield3-8
-					YaA(sim, y, a) = Yage(y, a);
-					BaA(sim, y, a) = SSBage(y, a);
-					SaA(sim, y, a) = Bage(y, a);
+					Mbar_bot += ( (a > Mbar_ind(0)) & (a < Mbar_ind(1)) ) * Nage(y, a);					
 				}
 				
 				Fbar_popwt(y) = Fbar_top / Fbar_bot;
-				Mbar_popwt(y) = Mbar_top / Mbar_bot;		
+				Mbar_popwt(y) = Mbar_top / Mbar_bot;
 							
-				//Indices by age
-				NumericMatrix NIage = Indices_YA(Nage(y, _), Survey_q, Zage(y, _), tf);
-				NumericMatrix BIage = NIndices * Index_wt;						
-				//Total Indices 
-				NumericVector NIndices = sum(NIage(
-				NumericVector BIndices = NIndices * Index_wt;				
+				//Indices by age and survey
+				NIage = Indices_tSA(Nage(y, _), Survey_q, Zage(y, _), tf);
+				for(int s = 0; s < qS; ++s){
+					BIage(s, _) = NIage(s, _) * Index_wt(s, _);
+				}
+				//Indices summed over all ages
+				NIndices(y, _) = rowSum(NIage);
+				BIndices(y, _) = rowSum(BIage);
 						
 				Abundance(y) = sum(Nage(y, _));
 				Ydiff(y) = sum(Yage(y, _) - Yage(y-1, _));
@@ -352,10 +352,10 @@ namespace PopSim{
 				SSB(y) = sum(SSBage(y, _));				
 				
 				//Assign local class members for MP inputs
-				MP_ssb = SSBage( Range(0, y), _ );
-				MP_biomass = Bage( Range(0, y), _ );
-				MP_ssb = SSB( Range(0, y), _ );
-				MP_ssb = SSB( Range(0, y), _ );
+				this->MP_ssb = SSBage( Range(0, y), _ );
+				this->MP_biomass = Bage( Range(0, y), _ );
+				this->MP_nindex = NIndices( Range(0, y), _ );
+				this->MP_bindex = BIndices( Range(0, y), _ );
 				
 			} // end projection			
 			
@@ -368,20 +368,41 @@ namespace PopSim{
 			all_Yield(sim, _) = clone(Yield);
 			all_Ydiff(sim, _) = clone(Ydiff);
 			all_Abundance(sim, _) = clone(Abundance);
+			// all_NIndices(sim, _) = clone(NIndices); //
 			all_Biomass(sim, _) = clone(Biomass);
+			// all_BIndices(sim, _) = clone(BIndices); //
 			all_SSB(sim, _) = clone(SSB);
-			all_Rec(sim, _) = clone( Rcpp::exp(Rec_obj.getRec()) );			
+			all_Rec(sim, _) = clone( exp(Rec_obj.getRec()) );
+			
+			for(y = 0; y < y_sim; ++y)
+			{
+				for(a = 0; a < A; ++a)
+				{
+					//3D arrays with age components
+					YaArr(a, y*(sim_no-1) + sim) = clone(Yage(y, a));
+					BaArr(a, y*(sim_no-1) + sim) = clone(SSBage(y, a));
+					SaArr(a, y*(sim_no-1) + sim) = clone(Bage(y, a));
+					
+					NIsArr(a, y*(sim_no-1) + sim) = clone(NIndices(y, a));
+					BIsArr(a, y*(sim_no-1) + sim) = clone(BIndices(y, a));
+				}
+			}
+			//convert dimensions to 3D array
+			YaArr.attr("dim") = (IntegerVector){A, y_sim, sim_no};
+			BaArr.attr("dim") = (IntegerVector){A, y_sim, sim_no};
+			SaArr.attr("dim") = (IntegerVector){A, y_sim, sim_no};
+			NIsArr.attr("dim") = (IntegerVector){qS, y_sim, sim_no};
+			BIsArr.attr("dim") = (IntegerVector){qS, y_sim, sim_no};
+
+			std::cout << "Iter: " << sim << "/" << sim_no << "\r";
 			
 		} // end simulation
 		
-		YaA_list = List::create();
-		BaA_list = List::create();
-		SaA_list = List::create();
-		for(a = 0; a < A; ++a){
-			YaA_list.push_back( Named(String(a) ) = (NumericMatrix)YaA.slice_x(a) );
-			BaA_list.push_back( Named(String(a) ) = (NumericMatrix)BaA.slice_x(a) );
-			SaA_list.push_back( Named(String(a) ) = (NumericMatrix)SaA.slice_x(a) );
-		}
+		//Derive RPs that are called
+		T FMSY = RP_obj.FMSY(),
+		  BMSY = RP_obj.BMSY(),
+		  MSY = RP_obj.MSY(),
+		  B0 = RP_obj.SSBeq( (T)0. );
 		
 		return  List::create(
 				Named("OM") = OM_name,
@@ -393,7 +414,7 @@ namespace PopSim{
 				Named("Fbar_popwt") = all_Fbar_popwt,
 				Named("Mbar_popwt") = all_Mbar_popwt,
 				Named("TAC") = all_TAC,
-				Named("TAC_disp") = TAC_disp,
+				Named("TAC_disp") = all_TAC_disp,
 				Named("Yield") = all_Yield,
 				Named("Ydiff") = all_Ydiff,
 				Named("Abundance") = all_Abundance,
@@ -401,21 +422,28 @@ namespace PopSim{
 				Named("SSB") = all_SSB,
 				Named("Rec") = all_Rec,
 				
-				Named("Nindex") = NIndices,
-				Named("Bindex") = BIndices,
+				// Named("Nindex") = all_NIndices,
+				// Named("Bindex") = all_BIndices,
 				
-				//These will need fixing to allow output in R
-				Named("YaA") = YaA_list,
-				Named("BaA") = BaA_list,
-				Named("SaA") = SaA_list
+				//Hopefully R will allow returning an array
+				Named("Yage") = YaArr, //by age
+				Named("Bage") = BaArr,
+				Named("Sage") = SaArr,
+				Named("NsInd") = NIsArr, //by survey
+				Named("BsInd") = BIsArr, //should I also return age-component of surveys?
+				
+				Named("FMSY") = FMSY,
+				Named("BMSY") = BMSY,
+				Named("MSY") = MSY,
+				Named("Bvirgin") = B0
 				);
 		
 					
 	} // end function
 	
-	};
+	}; // end of class
 	
-};
+} // end of namespace
 
 
 
@@ -424,10 +452,10 @@ namespace PopSim{
 namespace SPMSim{
 
 	template<class T>
-	List SurplusModel( List OM, 
-			  List MP, 
-			  int sim_no, 
-			  int y_sim ){
+	List SurplusModel(List OM, 
+					  //List MP, 
+					  int sim_no, 
+					  int y_sim ){
 				  
 		NumericMatrix Abundance(sim_no, y_sim),
 					  Biomass(sim_no, y_sim);

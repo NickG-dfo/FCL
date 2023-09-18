@@ -1,11 +1,23 @@
+#include <math.h> //this is for std::pow, std::exp, and std::log
+//#include <stdio.h> //this is for std::printf
+#include <iostream>
+#include <string> //this is for std::string in 'str_is'
+
+// #include <Rcpp.h> //not needed if including Armadillo
+#include <RcppArmadillo.h> //this is for use of Rcpp with mvnorm
+#include <mvnorm.h> // this is a sub-header within Arma
+// [[Rcpp::depends(RcppArmadillo, RcppDist)]]
+//This ^ is required for Arma, and is essential for rmvnorm
+using namespace Rcpp;
+
 #include <SimSource.hpp>
 
-//Save MP_blank.cpp as a separate file, the source this file through R//
+//Save MP_blank.cpp as a separate file, then source it through R//
 //This will create a function called 'Simulate' in R//
 
 namespace PopSim{
 
-	// Custom MP Function //
+	// MP Function //
 	
 	template<class T>
 	T Simulation<T>::MP_decision(Simulation<T>* psim, int n)
@@ -19,8 +31,9 @@ namespace PopSim{
 					  Biomass = psim -> MP_biomass,
 					  BIndex = psim -> MP_bindex,
 					  NIndex = psim -> MP_nindex;
-		int A = SSB.cols(),
-			Y = SSB.rows();
+		int Ages = SSB.cols(),
+			Years = SSB.rows(),
+			Surveys = NIndex.rows();
 		
 		T output = 0.;
 					

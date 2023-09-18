@@ -1,15 +1,3 @@
-#include <math.h> //this is for std::pow, std::exp, and std::log
-#include <stdio.h> //this is for std::printf
-#include <string> //these are for std::string in 'str_is'
-//#include <cstring>
-
-// #include <Rcpp.h> //not needed if including Armadillo
-#include <RcppArmadillo.h> //this is for use of Rcpp with mvnorm
-#include <mvnorm.h> // this is a sub-header within Arma
-// [[Rcpp::depends(RcppArmadillo, RcppDist)]]
-//This ^ is required for Arma, and is essential for rmvnorm
-using namespace Rcpp;
-
 #include <FCLutils.hpp> //simple functions for conversions and containers
 using namespace FCLutils;
 
@@ -33,7 +21,7 @@ List Simulate(  List OM,
 	if(	str_is( SimType, "SPM" ) ){	
 	
 		return SPMSim::SurplusModel<double> ( OM, 
-											  MP, 
+											  // MP, 
 											  sim_no, 
 											  y_sim );
 								
@@ -46,6 +34,7 @@ List Simulate(  List OM,
 		
 	}				
 
+	std::cout << "'SimType' does not match any available value in Simulate. Returning NULL.";
 	return List::create(R_NilValue);
 							
 }

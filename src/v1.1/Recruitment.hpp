@@ -3,89 +3,6 @@ namespace PopSim{
 
 	template<class T>
 	class RP;
-	
-	//For steepness formulations, parms(0) is 'h' and parms(1) is 'S0'
-	//For shepherd and SigmoidBH, parms(2) is 'c'
-	
-	// template<class T>
-	// T Constant(T SSB, NumericVector &parms){
-		// return parms(0);
-	// }
-	
-	// template<class T>
-	// T BevertonHolt1(T SSB, NumericVector &parms){
-		// return SSB * parms(0) / (parms(1) + SSB);
-	// }
-	
-	// template<class T>
-	// T BevertonHolt2(T SSB, NumericVector &parms){
-		// return SSB * parms(0) / (1. + parms(1) * SSB);
-	// }
-	
-	// template<class T>
-	// T BevertonHolth(T SSB, NumericVector &parms){
-		// T h = parms(0),
-		  // R0 = parms(1);
-		// return .8*R0*h*SSB / (.2*SPR0*R0*(1.-h) + (h-.2)*SSB);
-	// }
-	
-	// template<class T>
-	// T BevertonHoltComp(T SSB, NumericVector &parms){
-		// T h = parms(1) / (4. + parms(1));
-		// NumericVector tempparm = {h, parms(1)};
-		// return BevertonHolth(SSB, tempparm);
-	// }
-	
-	// template<class T>
-	// T Ricker(T SSB, NumericVector &parms){
-		// return parms(0) * SSB * std::exp( -parms(1) * SSB );
-	// }
-	
-	// template<class T>
-	// T Rickerh(T SSB, NumericVector &parms){
-		// T b = std::log(5. * parms(0)) / (.8 * parms(1)),
-		  // a = std::exp(b * parms(1) / SPR0 );
-		// NumericVector tempparm = {a, b};
-		// return Ricker(SSB, tempparm);
-	// }
-	
-	// template<class T>
-	// T RickerComp(T SSB, NumericVector &parms){
-		// T h = std::pow(.2 * parms(0), .8);
-		// NumericVector tempparm = {h, parms(1)};
-		// return Rickerh(SSB, tempparm);
-	// }
-	
-	// template<class T>
-	// T SigmoidBevertonHolt(T SSB, NumericVector &parms){
-		// return parms(0) * SSB / (1. + std::pow(parms(1) / SSB), parms(2));
-	// }
-	
-	// template<class T>
-	// T Shepherd(T SSB, NumericVector &parms){
-		// return parms(0) * SSB / (1. + std::pow(SSB / parms(1)), parms(2));
-	// }
-	
-	// template<class T>
-	// T Shepherdh(T SSB, NumericVector &parms){
-		// T b = parms(1) * ((.2 - parms(0)) / (parms(0) * std::pow(.2, parms(2)) - .2)) * (-1./parms(2)),
-		  // a = (1. + std::pow(parms(1)/b), parms(2)) / SPR0;
-		// NumericVector tempparm = {a, b};
-		// return Shepherd(SSB, tempparm); // a * SSB / (1. + std::pow(SSB / b), parms(2));
-	// }
-	
-	// template<class T>
-	// T Schaefer(T SSB, NumericVector &parms){
-		// return parms(0) * SSB * (1. - parms(1) * SSB);
-	// }
-	
-	// template<class T>
-	// T DerisoShnute(T SSB, NumericVector &parms){
-		// return parms(0) * SSB * std::pow(1. - parms(2)*parms(1)*SSB, 1./parms(2));
-	// }
-	
-	// template<class T>
-	// T CustomRecruitment(T, NumericVector&);
 
 	template<class T>
 	class SR{
@@ -212,14 +129,18 @@ namespace PopSim{
 
 		public:
 		
-			NumericVector parms; //vector of parms values for SRR
+			NumericVector parms; //vector of parameter values for SRR
 			T (*recruitment)(T, NumericVector&); //function
+			void Rassign(T (*f)(T, NumericVector&))
+			{
+				this->recruitment = f;
+			}
 			
-			SR(String Rec_option, 
+			SR(String& Rec_option, 
 			   List &LHC, // Just for SPR0
-			   int y, T R_std, T Max_R,
-			   bool bc, bool RKseed,
-			   bool p_err = 1, bool r_err = 1): 
+			   int y, T& R_std, T& Max_R,
+			   bool& bc, bool& RKseed,
+			   bool& p_err = 1, bool& r_err = 1): 
 				rec_opt(Rec_option), 
 				Y(y), std_log_r(R_std), max_rec(Max_R),
 				bias_correction(bc), rkseed(RKseed),
@@ -236,38 +157,39 @@ namespace PopSim{
 				logRy = rep(0., Y);
 
 					  if( str_is(Rec_option, "Const") ){ 
-					  recruitment = Constant;
+					// recruitment = this->Constant;
+					Rassign(Constant);
 				}else if( str_is(Rec_option, "BH1") ){ 
-					recruitment = BevertonHolt1;
+					recruitment = this->BevertonHolt1;
 				}else if( str_is(Rec_option, "BH2") ){ 
-					recruitment = BevertonHolt2;
+					recruitment = this->BevertonHolt2;
 				}else if( str_is(Rec_option, "RK") ){ 
-					recruitment = Ricker;
+					recruitment = this->Ricker;
 				}else if( str_is(Rec_option, "BHh") ){ 
-					recruitment = BevertonHolth;
+					recruitment = this->BevertonHolth;
 				}else if( str_is(Rec_option, "RKh") ){ 
-					recruitment = Rickerh;
+					recruitment = this->Rickerh;
 				}else if( str_is(Rec_option, "BHComp") ){ 
-					recruitment = BevertonHoltComp;
+					recruitment = this->BevertonHoltComp;
 				}else if( str_is(Rec_option, "RKComp") ){ 
-					recruitment = RickerComp;
+					recruitment = this->RickerComp;
 				}else if( str_is(Rec_option, "SigBH") ){ 
-					recruitment = SigmoidBevertonHolt;
+					recruitment = this->SigmoidBevertonHolt;
 				}else if( str_is(Rec_option, "Shepherd") ){ 
-					recruitment = Shepherd;
+					recruitment = this->Shepherd;
 				}else if( str_is(Rec_option, "Shepherdh") ){ 
-					recruitment = Shepherdh;
+					recruitment = this->Shepherdh;
 				}else if( str_is(Rec_option, "Schaefer") ){ 
-					recruitment = Schaefer;
+					recruitment = this->Schaefer;
 				}else if( str_is(Rec_option, "DerisoShnute") ){ 
-					recruitment = DerisoShnute;
+					recruitment = this->DerisoShnute;
 				
 				}else if( str_is(Rec_option, "Custom") ){
-					recruitment = CustomRecruitment; 
+					recruitment = this->CustomRecruitment; 
 				}else{
 					std::printf("No valid recruitment option selected. Setting to default (constant) recruitment.");
 					rec_opt = "Const";
-					recruitment = Constant;
+					recruitment = this->Constant;
 				}
 				
 			}
@@ -289,7 +211,7 @@ namespace PopSim{
 				cov = derive_VCoV(Kernel);
 				NumericVector temp_parms(Kernel.ncol());
 				for(int i = 0; i < Kernel.ncol(); i++){
-					temp_parms(i) = Rcpp::median(Kernel(_, i)); 
+					temp_parms(i) = median( (NumericVector)Kernel(_, i) );
 					//what if we want to use mean
 				}
 				parms = temp_parms;
